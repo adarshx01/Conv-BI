@@ -1,17 +1,18 @@
+require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT;
 
 app.use(cors());
 app.use(express.json());
 
 const dbConfig = {
-  user: 'llm_user',
-  password: 'projasLLM@123',
-  host: '3.111.36.168',
+  user: process.env.REACT_APP_USER,
+  password: process.env.REACT_APP_PASSWORD,
+  host: process.env.REACT_APP_HOST,
 };
 
 const pools = {};
