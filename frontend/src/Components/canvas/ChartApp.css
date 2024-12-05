@@ -1,0 +1,71 @@
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  .app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: #f0f0f0;
+  }
+  
+  .export-button {
+    padding: 0.5rem 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .app-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  
+  .chart-list {
+    width: 200px;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    overflow-y: auto;
+  }
+  
+  .chart-type {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: move;
+  }
+  
+  .chart-type svg {
+    margin-right: 0.5rem;
+  }
+  
+  .canvas {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    background-color: #ffffff;
+    background-image: linear-gradient(#f1f1f1 1px, transparent 1px),
+      linear-gradient(90deg, #f1f1f1 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  .chart-container {
+    width: 100%;
+    height: 100%;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  
