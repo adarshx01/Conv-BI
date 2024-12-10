@@ -2,10 +2,10 @@ const _ = require('lodash');
 
 class DataReducer {
   /**
-   * Reduce large datasets while preserving important information
-   * @param {Array} data - Raw data array
-   * @param {Object} options - Reduction configuration
-   * @returns {Array} Reduced dataset
+ 
+   * @param {Array} data  
+   * @param {Object} options 
+   * @returns {Array} 
    */
   static reduceDataset(data, options = {}) {
     if (!data || data.length <= options.maxDataPoints) {
@@ -20,16 +20,16 @@ class DataReducer {
       peakPreservationThreshold = 0.1 // 10% of data range
     } = options;
 
-    // Identify numeric columns for smoothing
+
     const numericColumns = this.identifyNumericColumns(data);
 
-    // Extract peak indices if peak preservation is enabled
+
     let peakIndices = [];
     if (preservePeaks) {
       peakIndices = this.detectPeaks(data, numericColumns, peakPreservationThreshold);
     }
 
-    // Perform data reduction
+
     let reducedData;
     switch (smoothingMethod) {
       case 'slidingWindow':

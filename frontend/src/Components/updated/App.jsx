@@ -5,13 +5,12 @@ import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import Canvas from './Canvas';
 import ExportModal from './ExportModal';
-import PageManager from './PageManager';
 import './styles/App.css';
 
 function App() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [pages, setPages] = useState([
-    { id: 1, elements: [], canvasSize: { width: 1600, height: 1200 } }
+    { id: 1, elements: [], canvasSize: { width: 1200, height: 800 } }
   ]);
   const [currentPageId, setCurrentPageId] = useState(1);
 
@@ -42,12 +41,19 @@ function App() {
 
   const handlePageAdd = () => {
     const newPageId = pages.length + 1;
-    setPages([...pages, { id: newPageId, elements: [], canvasSize: { width: 1600, height: 1200 } }]);
+    setPages([...pages, { id: newPageId, elements: [], canvasSize: { width: 1200, height: 800 } }]);
     setCurrentPageId(newPageId);
   };
 
   const handlePageChange = (pageId) => {
     setCurrentPageId(pageId);
+  };
+
+  const handlePageRemove = (pageId) => {
+    if (pages.length > 1) {
+      setPages(prevPages => prevPages.filter(page => page.id !== pageId));
+      setCurrentPageId(prevCurrentPageId => prevCurrentPageId > pageId ? prevCurrentPageId - 1 : prevCurrentPageId);
+    }
   };
 
   const handleCanvasResize = (newSize) => {
@@ -75,15 +81,7 @@ function App() {
       <div className="app">
         <Navbar onExport={handleExport} />
         <div className="main-content">
-          <Sidebar onElementAdd={handleElementAdd} />
           <div className="canvas-container">
-            <PageManager
-              pages={pages}
-              currentPageId={currentPageId}
-              onPageAdd={handlePageAdd}
-              onPageChange={handlePageChange}
-              onCanvasResize={handleCanvasResize}
-            />
             {pages.map(page => (
               <Canvas
                 key={page.id}
@@ -95,6 +93,15 @@ function App() {
               />
             ))}
           </div>
+          <Sidebar
+            onElementAdd={handleElementAdd}
+            pages={pages}
+            currentPageId={currentPageId}
+            onPageAdd={handlePageAdd}
+            onPageChange={handlePageChange}
+            onPageRemove={handlePageRemove}
+            onCanvasResize={handleCanvasResize}
+          />
         </div>
         {showExportModal && (
           <ExportModal
@@ -108,4 +115,3 @@ function App() {
 }
 
 export default App;
-

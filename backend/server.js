@@ -2,9 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
+const DataReducer = require('./DataReducer'); // Import DataReducer
 
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
@@ -21,7 +22,7 @@ app.get('/api/databases', async (req, res) => {
   try {
     const mainPool = new Pool({
       ...dbConfig,
-      database: 'postgres', // Connect to default 'postgres' database to list all databases
+      database: 'postgres',
     });
 
     const result = await mainPool.query("SELECT datname FROM pg_database WHERE datistemplate = false;");
@@ -112,7 +113,22 @@ app.post('/api/query', async (req, res) => {
 
     console.log('Executing query:', query);
     const result = await pools[database].query(query);
-    res.json(result.rows);
+    let data = result.rows;
+
+    // Apply data reduction
+    const MAX_DATA_POINTS = 20; // Threshold for maximum data points
+
+    if (data.length > MAX_DATA_POINTS) {
+      data = DataReducer.reduceDataset(data, {
+        maxDataPoints: MAX_DATA_POINTS,
+        preservePeaks: true,
+        smoothingMethod: 'slidingWindow', // 'weightedAverage' or 'uniformSampling'
+        smoothingWindow: 5, // Adjust as needed
+        peakPreservationThreshold: 0.1 // Adjust as needed
+      });
+    }
+
+    res.json(data);
   } catch (err) {
     console.error('Error executing query:', err);
     res.status(500).json({ 
@@ -126,4 +142,3 @@ app.post('/api/query', async (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-

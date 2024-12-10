@@ -1,0 +1,55 @@
+.data-selector {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  
+  .data-selector h2 {
+    margin-bottom: 1rem;
+  }
+  
+  .data-selector label {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  
+  .data-selector select,
+  .data-selector input[type="text"] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+    font-size: 1rem;
+  }
+  
+  .data-selector button {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .data-selector button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .data-selector .checkbox-group {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+  }
+  
+  .data-selector .checkbox-group label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.25rem;
+  }
+  
+  .data-selector .checkbox-group input[type="checkbox"] {
+    margin-right: 0.5rem;
+  }
+  
+  

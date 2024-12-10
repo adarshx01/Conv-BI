@@ -44,14 +44,14 @@
   padding: 8px 16px;
   border-radius: 4px;
   border: none;
-  background-color: #007bff;
+  background-color: #9694FF;
   color: white;
   cursor: pointer;
 }
 
 /* Sidebar Styles */
 .sidebar {
-  width: 300px;
+  width: 250px;
   background: white;
   border-right: 1px solid #e0e0e0;
   display: flex;
@@ -141,7 +141,7 @@
 }
 
 .page-controls button.active {
-  background-color: #007bff;
+  background-color: #7ED4AD;
   color: white;
 }
 

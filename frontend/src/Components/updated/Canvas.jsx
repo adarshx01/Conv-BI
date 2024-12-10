@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDrop } from 'react-dnd';
 import { Rnd } from 'react-rnd';
 import ElementRenderer from './ElementRenderer';
 import { CircleX } from 'lucide-react';
 
 function Canvas({ elements, setElements, canvasSize, pageId, isActive }) {
+  const [hoveredElement, setHoveredElement] = useState(null);
   const [, drop] = useDrop(() => ({
     accept: 'element',
     drop: (item, monitor) => {
@@ -38,7 +39,7 @@ function Canvas({ elements, setElements, canvasSize, pageId, isActive }) {
   };
 
   // Grid size in pixels
-  const gridSize = 20;
+  const gridSize = 10;
 
   return (
     <div 
@@ -92,23 +93,30 @@ function Canvas({ elements, setElements, canvasSize, pageId, isActive }) {
             dragGrid={[gridSize, gridSize]}
             resizeGrid={[gridSize, gridSize]}
           >
-            <div className="canvas-element" style={{ 
-              width: '100%', 
-              height: '100%',
-              backgroundColor: 'white',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              borderRadius: '4px',
-              overflow: 'hidden'
-            }}>
+            <div 
+              className="canvas-element relative" 
+              style={{ 
+                width: '100%', 
+                height: '100%',
+                backgroundColor: 'white',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                borderRadius: '4px',
+                overflow: 'hidden'
+              }}
+              onMouseEnter={() => setHoveredElement(element.id)}
+              onMouseLeave={() => setHoveredElement(null)}
+            >
               <ElementRenderer element={element} onUpdate={handleElementUpdate} />
-              <div className="element-controls">
+              {hoveredElement === element.id && (
+                <div className="element-controls absolute top-2 right-2">
                 <button 
                   onClick={() => handleElementRemove(element.id)}
                   className="bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center"
                 >
                   <CircleX className='' />
                 </button>
-              </div>
+                </div>
+              )}
             </div>
           </Rnd>
         ))}

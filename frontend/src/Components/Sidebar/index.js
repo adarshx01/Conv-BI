@@ -70,7 +70,7 @@ const Sidebar = () => {
           Report Builder
           </Link>
         </Menu.Item>
-        <Menu.Item
+        {/* <Menu.Item
           key="4"
           icon={<DatabaseOutlined className="sidebar-menu-item-icon" />}
           className="sidebar-menu-item"
@@ -96,11 +96,12 @@ const Sidebar = () => {
           <Link to="/reportdesigner" className="sidebar-menu-item-link">
           RDesigner
           </Link>
-        </Menu.Item>
+        </Menu.Item> */}
         <Menu.Item
           key="4"
           icon={<DatabaseOutlined className="sidebar-menu-item-icon" />}
           className="sidebar-menu-item"
+          onClick={toggleCollapse}
         >
           <Link to="/UpdatedCanva" className="sidebar-menu-item-link">
           UpdatedCanva

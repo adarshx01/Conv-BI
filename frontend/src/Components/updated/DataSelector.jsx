@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-// import { DatePicker } from "@/components/ui/date-picker"
-import { format } from 'date-fns';
 
 const joinTypes = ['INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'FULL OUTER JOIN'];
 
@@ -20,7 +18,7 @@ function DataSelector({ onDataSelect }) {
   const [dateColumn, setDateColumn] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [xAxis, setXAxis] = useState([]);
+  const [xAxis, setXAxis] = useState('');
   const [yAxis, setYAxis] = useState([]);
 
   useEffect(() => {
@@ -62,13 +60,13 @@ function DataSelector({ onDataSelect }) {
     }
   }, [columns]);
 
-
   const fetchDatabases = async () => {
     try {
       const response = await axios.get('http://localhost:5000/api/databases');
       setDatabases(response.data);
     } catch (error) {
       setError('Failed to fetch databases');
+      console.error('Error fetching databases:', error);
     }
   };
 
@@ -78,6 +76,7 @@ function DataSelector({ onDataSelect }) {
       setTables(response.data);
     } catch (error) {
       setError(`Failed to fetch tables for ${database}`);
+      console.error(`Error fetching tables for ${database}:`, error);
     }
   };
 
@@ -87,6 +86,7 @@ function DataSelector({ onDataSelect }) {
       setColumns(prev => ({ ...prev, [table]: response.data }));
     } catch (error) {
       setError(`Failed to fetch columns for ${database}.${table}`);
+      console.error(`Error fetching columns for ${database}.${table}:`, error);
     }
   };
 
@@ -110,6 +110,12 @@ function DataSelector({ onDataSelect }) {
       return;
     }
 
+    if (!xAxis || yAxis.length === 0) {
+      setError('Please select both X-axis and Y-axis columns');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await axios.post('http://localhost:5000/api/query', {
         database: selectedDatabase,
@@ -125,13 +131,16 @@ function DataSelector({ onDataSelect }) {
         yAxis
       });
 
+      console.log('Query response:', response.data); // Log the response data
+
       if (response.data && response.data.length > 0) {
         onDataSelect(response.data, { xAxis, yAxis });
       } else {
-        setError('No data returned from query');
+        setError('No data returned from query. Please check your selection and try again.');
       }
     } catch (error) {
-      setError(error.response?.data?.details || 'Failed to fetch data');
+      setError(error.response?.data?.error || 'Failed to fetch data');
+      console.error('Error details:', error.response?.data?.details);
     } finally {
       setLoading(false);
     }
@@ -140,6 +149,7 @@ function DataSelector({ onDataSelect }) {
   return (
     <div className="data-selector p-4 bg-background border rounded-lg">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Database selection */}
         <div className="space-y-2">
           <label className="block text-sm font-medium">Select Database:</label>
           <select
@@ -160,6 +170,7 @@ function DataSelector({ onDataSelect }) {
           </select>
         </div>
 
+        {/* Table selection */}
         {selectedDatabase && (
           <div className="space-y-2">
             <label className="block text-sm font-medium">Select Main Table:</label>
@@ -181,6 +192,7 @@ function DataSelector({ onDataSelect }) {
           </div>
         )}
 
+        {/* Column selection */}
         {selectedTable && columns[selectedTable] && (
           <div className="space-y-2">
             <label className="block text-sm font-medium">Select Columns for {selectedTable}:</label>
@@ -200,19 +212,20 @@ function DataSelector({ onDataSelect }) {
           </div>
         )}
 
+        {/* Date range selection */}
         {dateColumn && (
           <div className="space-y-2">
             <label className="block text-sm font-medium">Select Date Range:</label>
             <div className="flex space-x-2">
               <input
                 type="date"
-                value={startDate || ''}
+                value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="p-2 border rounded"
               />
               <input
                 type="date"
-                value={endDate || ''}
+                value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="p-2 border rounded"
               />
@@ -220,6 +233,7 @@ function DataSelector({ onDataSelect }) {
           </div>
         )}
 
+        {/* Join type selection */}
         <div className="space-y-2">
           <label className="block text-sm font-medium">Join Type:</label>
           <select
@@ -234,6 +248,7 @@ function DataSelector({ onDataSelect }) {
           </select>
         </div>
 
+        {/* Join table and condition */}
         {joinType && (
           <>
             <div className="space-y-2">
@@ -301,31 +316,26 @@ function DataSelector({ onDataSelect }) {
           </>
         )}
 
+        {/* X-axis selection */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium">Select X-axis columns:</label>
-          <div className="space-y-1">
+          <label className="block text-sm font-medium">Select X-axis column:</label>
+          <select
+            value={xAxis}
+            onChange={(e) => setXAxis(e.target.value)}
+            className="w-full p-2 border rounded"
+          >
+            <option value="">Select X-axis</option>
             {Object.entries(selectedColumns).flatMap(([table, cols]) =>
               cols.map(col => (
-                <label key={`${table}.${col}`} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={xAxis.includes(`${table}.${col}`)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setXAxis([...xAxis, `${table}.${col}`]);
-                      } else {
-                        setXAxis(xAxis.filter(item => item !== `${table}.${col}`));
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <span>{`${table}.${col}`}</span>
-                </label>
+                <option key={`${table}.${col}`} value={`${table}.${col}`}>
+                  {`${table}.${col}`}
+                </option>
               ))
             )}
-          </div>
+          </select>
         </div>
 
+        {/* Y-axis selection */}
         <div className="space-y-2">
           <label className="block text-sm font-medium">Select Y-axis columns:</label>
           <div className="space-y-1">

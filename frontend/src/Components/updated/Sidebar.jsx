@@ -19,7 +19,7 @@ import {
   Table, 
   Star
 } from 'lucide-react';
-import { ThumbsDown, ThumbsUp } from 'react-feather';
+import PageManager from './PageManager';
 
 const DraggableElement = ({ type, icon: Icon, label, onAdd }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
@@ -44,6 +44,10 @@ const DraggableElement = ({ type, icon: Icon, label, onAdd }) => {
 };
 
 const elementCategories = {
+  basic: [
+    { type: 'text', icon: Type, label: 'Text' },
+    { type: 'image', icon: Image, label: 'Image' },
+  ],
   charts: [
     { type: 'bar', icon: BarChart, label: 'Bar Chart' },
     { type: 'stackedBar', icon: Layers, label: 'Stacked Bar' },
@@ -63,26 +67,11 @@ const elementCategories = {
       label: 'Import Data',
     }
   ],
-  basic: [
-    { type: 'text', icon: Type, label: 'Text' },
-    { type: 'image', icon: Image, label: 'Image' },
-  ],
-  shapes: [
-    { type: 'rectangle', icon: Square, label: 'Rectangle' },
-    { type: 'circle', icon: Circle, label: 'Circle' },
-    { type: 'triangle', icon: Triangle, label: 'Triangle' },
-  ],
-  other: [
-    { type: 'emoji', icon: Smile, label: 'Smile' },
-    // { type: 'emoji', icon: ThumbsDown, label: 'ThumbsDown' },
-    // { type: 'emoji', icon: ThumbsUp, label: 'ThumbsUp' },
-    // { type: 'emoji', icon: Star, label: 'Star' },
-  ],
 };
 
-function Sidebar({ onElementAdd }) {
+function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, onPageRemove, onCanvasResize }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState('data');
+  const [activeCategory, setActiveCategory] = useState('charts');
 
   const filteredElements = elementCategories[activeCategory].filter(element =>
     element.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -90,6 +79,14 @@ function Sidebar({ onElementAdd }) {
 
   return (
     <div className="sidebar">
+      <PageManager
+        pages={pages}
+        currentPageId={currentPageId}
+        onPageAdd={onPageAdd}
+        onPageChange={onPageChange}
+        onPageRemove={onPageRemove}
+        onCanvasResize={onCanvasResize}
+      />
       <div className="sidebar-search">
         <input
           type="text"
@@ -99,18 +96,18 @@ function Sidebar({ onElementAdd }) {
           className="w-full p-2 border rounded"
         />
       </div>
-      <div className="sidebar-categories text-center">
+      <div className="sidebar-categories mx-auto ">
         {Object.keys(elementCategories).map(category => (
           <button
             key={category}
-            className={`category-button ${activeCategory === category ? 'active' : ''} px-1 border mx-0.5 rounded`}
+            className={`category-button ${activeCategory === category ? 'active' : ''} px-2 rounded-3xl bg-violet-400 border-2 mx-0.5`}
             onClick={() => setActiveCategory(category)}
           >
             {category.charAt(0).toUpperCase() + category.slice(1)}
           </button>
         ))}
       </div>
-      <div className="element-list">
+      <div className="element-list ">
         {filteredElements.map((element) => (
           <DraggableElement
             key={element.type}

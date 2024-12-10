@@ -29,7 +29,7 @@ function ExportModal({ onClose, pages }) {
 
   const exportToPDF = async () => {
     const pdf = new jsPDF({
-      orientation: 'p',
+      orientation: (pages[0].canvasSize.width>=pages[0].canvasSize.height)?'l':'p',
       unit: 'px',
       format: [pages[0].canvasSize.width, pages[0].canvasSize.height],
     });
@@ -40,13 +40,15 @@ function ExportModal({ onClose, pages }) {
 
       // Ensure the canvas is visible before capturing
       canvas.style.display = 'block';
-    
+  
       const scale = 2; // Increase scale for higher resolution
       const canvasImage = await html2canvas(canvas, {
         scale: scale,
         useCORS: true,
         allowTaint: true,
         logging: false,
+        width: pages[i].canvasSize.width,
+        height: pages[i].canvasSize.height,
       });
 
       // Hide the canvas again if it's not the current page
@@ -54,13 +56,13 @@ function ExportModal({ onClose, pages }) {
         canvas.style.display = 'none';
       }
 
-      const imgData = canvasImage.toDataURL('image/png');
+      const imgData = canvasImage.toDataURL('image/jpeg', 1.0);
 
       if (i > 0) {
         pdf.addPage([pages[i].canvasSize.width, pages[i].canvasSize.height]);
       }
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pages[i].canvasSize.width, pages[i].canvasSize.height);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pages[i].canvasSize.width, pages[i].canvasSize.height, '', 'FAST');
 
       // Add a small delay between pages to ensure proper rendering
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -82,6 +84,8 @@ function ExportModal({ onClose, pages }) {
         scale: scale,
         useCORS: true,
         allowTaint: true,
+        width: pages[i].canvasSize.width,
+        height: pages[i].canvasSize.height,
       });
 
       // Hide the canvas again if it's not the current page

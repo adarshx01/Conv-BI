@@ -4,7 +4,7 @@
     overflow: hidden;
   }
   .sidebar.collapsed {
-    width: 50px;
+    width: 3.125rem;
   }
   .sidebar .toggle-button {
     position: absolute;
