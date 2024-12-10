@@ -57,8 +57,8 @@ const App = () => {
                       <Route path="/upload" element={<UploadPage />} />
                       <Route path="/reportbuilder" element={<ReportBuilder />} />
                       <Route path="/chartreport" element={<ChartApp />} />
-                      <Route path="/reportdesigner" element={<RDesigner />} />
-                      <Route path="/UpdatedCanva" element={<UpdatedCanva />} />
+                      <Route path="/reportdesigner" element={<UpdatedCanva />} />
+                      {/* <Route path="/UpdatedCanva" element={<UpdatedCanva />} /> */}
 
                     </Routes>
                   </Content>

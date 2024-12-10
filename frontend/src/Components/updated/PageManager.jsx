@@ -79,7 +79,7 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
         {pages.map((page) => (
           <div
             key={page.id}
-            className={`flex items-center justify-between w-48 px-4 py-2 mb-2 border border-gray-400 rounded-md cursor-pointer rounded-xl ${
+            className={`flex items-center justify-between w-48 px-4 py-2 mb-2 border border-gray-400  cursor-pointer rounded-xl ${
               currentPageId === page.id ? 'bg-gray-200' : 'hover:bg-gray-100'
             }`}
             onClick={() => onPageChange(page.id)}
@@ -99,7 +99,7 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
                 handlePageRemove(page.id);
               }}
             >
-              <CircleX size={20} />
+              <CircleX size={20}  />
             </button>
           </div>
         ))}

@@ -61,7 +61,7 @@ const Sidebar = () => {
             Chatbot
           </Link>
         </Menu.Item>
-        <Menu.Item
+        {/* <Menu.Item
           key="3"
           icon={<BarChartOutlined className="sidebar-menu-item-icon" />}
           className="sidebar-menu-item"
@@ -69,7 +69,7 @@ const Sidebar = () => {
           <Link to="/reportbuilder" className="sidebar-menu-item-link">
           Report Builder
           </Link>
-        </Menu.Item>
+        </Menu.Item> */}
         {/* <Menu.Item
           key="4"
           icon={<DatabaseOutlined className="sidebar-menu-item-icon" />}
@@ -103,8 +103,8 @@ const Sidebar = () => {
           className="sidebar-menu-item"
           onClick={toggleCollapse}
         >
-          <Link to="/UpdatedCanva" className="sidebar-menu-item-link">
-          UpdatedCanva
+          <Link to="/reportdesigner" className="sidebar-menu-item-link">
+          Report Builder
           </Link>
         </Menu.Item>
 
