@@ -52,16 +52,14 @@ function App() {
   const handlePageRemove = (pageId) => {
     if (pages.length > 1) {
       setPages(prevPages => prevPages.filter(page => page.id !== pageId));
-      setCurrentPageId(prevCurrentPageId => prevCurrentPageId > pageId ? prevCurrentPageId - 1 : prevCurrentPageId);
+      setCurrentPageId(currentPageId > pageId ? currentPageId - 1 : currentPageId);
     }
   };
 
-  const handleCanvasResize = (newSize) => {
+  const handleCanvasResize = (pageId, newSize) => {
     setPages(prevPages =>
       prevPages.map(page =>
-        page.id === currentPageId
-          ? { ...page, canvasSize: newSize }
-          : page
+        page.id === pageId ? { ...page, canvasSize: newSize } : page
       )
     );
   };
@@ -69,9 +67,7 @@ function App() {
   const handleElementsUpdate = (pageId, newElements) => {
     setPages(prevPages =>
       prevPages.map(page =>
-        page.id === pageId
-          ? { ...page, elements: newElements }
-          : page
+        page.id === pageId ? { ...page, elements: newElements } : page
       )
     );
   };
@@ -79,7 +75,7 @@ function App() {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="app">
-        <Navbar onExport={handleExport} />
+        {/* <Navbar onExport={handleExport} /> */}
         <div className="main-content">
           <div className="canvas-container">
             {pages.map(page => (
@@ -101,6 +97,7 @@ function App() {
             onPageChange={handlePageChange}
             onPageRemove={handlePageRemove}
             onCanvasResize={handleCanvasResize}
+            onExport={handleExport}
           />
         </div>
         {showExportModal && (

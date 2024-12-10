@@ -17,9 +17,12 @@ import {
   Triangle, 
   Smile, 
   Table, 
-  Star
+  Star,
+  Share,
+  ShareIcon
 } from 'lucide-react';
 import PageManager from './PageManager';
+import { Save } from 'react-feather';
 
 const DraggableElement = ({ type, icon: Icon, label, onAdd }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
@@ -69,7 +72,7 @@ const elementCategories = {
   ],
 };
 
-function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, onPageRemove, onCanvasResize }) {
+function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, onPageRemove, onCanvasResize ,onExport }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('charts');
 
@@ -79,6 +82,22 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
 
   return (
     <div className="sidebar">
+      <div className='my-3 mx-auto flex flex-row'>
+        <button 
+          onClick={() => {}} 
+          className='flex items-center border-2 rounded-3xl px-3 mx-1 h-10 space-x-2 hover:bg-green-300 focus:bg-violet-400'>
+          <Save className='w-5 h-5' /> 
+          <span>Save Report</span>
+        </button>
+
+        <button 
+          onClick={onExport} 
+          className='flex items-center border-2 rounded-3xl px-3 mx-1 h-10 space-x-2 hover:bg-green-300 focus:bg-violet-400'>
+          <ShareIcon className='w-5 h-5' /> 
+          <span>Export</span>
+        </button>
+      </div>
+
       <div className="sidebar-search">
         <input
           type="text"
