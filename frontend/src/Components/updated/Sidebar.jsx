@@ -53,12 +53,12 @@ const elementCategories = {
     { type: 'stackedBar', icon: Layers, label: 'Stacked Bar' },
     { type: 'stripedBar', icon: BarChartHorizontal, label: 'Striped Bar' },
     { type: 'line', icon: LineChart, label: 'Line Chart' },
-    { type: 'lineWithValues', icon: TrendingUp, label: 'Line with Values' },
+    { type: 'lineWithValues', icon: TrendingUp, label: 'Line + Value' },
     { type: 'area', icon: AreaChart, label: 'Area Chart' },
     { type: 'pie', icon: PieChart, label: 'Pie Chart' },
-    { type: 'halfPie', icon: PieChartIcon, label: 'Half Pie Chart' },
-    { type: 'hollowPie', icon: Donut, label: 'Hollow Pie Chart' },
-    { type: 'barLine', icon: BarChart, label: 'Bar + Line Chart' },
+    { type: 'halfPie', icon: PieChartIcon, label: 'Half Pie' },
+    { type: 'hollowPie', icon: Donut, label: 'Hollow Pie' },
+    { type: 'barLine', icon: BarChart, label: 'Bar + Line' },
   ],
   data: [
     { 
@@ -79,14 +79,6 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
 
   return (
     <div className="sidebar">
-      <PageManager
-        pages={pages}
-        currentPageId={currentPageId}
-        onPageAdd={onPageAdd}
-        onPageChange={onPageChange}
-        onPageRemove={onPageRemove}
-        onCanvasResize={onCanvasResize}
-      />
       <div className="sidebar-search">
         <input
           type="text"
@@ -100,7 +92,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
         {Object.keys(elementCategories).map(category => (
           <button
             key={category}
-            className={`category-button ${activeCategory === category ? 'active' : ''} px-2 rounded-3xl bg-violet-400 border-2 mx-0.5`}
+            className={`category-button ${activeCategory === category ? 'active bg-orange-200' : 'bg-violet-400'} px-2 rounded-3xl   border-2 mx-0.5`}
             onClick={() => setActiveCategory(category)}
           >
             {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -115,6 +107,18 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
             onAdd={onElementAdd}
           />
         ))}
+      </div>
+      <div className='p-2 border-2 mx-2 rounded-xl mt-24'>
+        <p className='font-semibold text-[1rem] text-center'>Page Settings</p>
+        <hr className='mb-4'></hr>
+        <PageManager
+          pages={pages}
+          currentPageId={currentPageId}
+          onPageAdd={onPageAdd}
+          onPageChange={onPageChange}
+          onPageRemove={onPageRemove}
+          onCanvasResize={onCanvasResize}
+        />
       </div>
     </div>
   );
