@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const joinTypes = ['INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'FULL OUTER JOIN'];
 
 function DataSelector({ onDataSelect }) {
+  const [step, setStep] = useState(1);
   const [databases, setDatabases] = useState([]);
   const [selectedDatabase, setSelectedDatabase] = useState('');
   const [tables, setTables] = useState([]);
@@ -18,8 +19,10 @@ function DataSelector({ onDataSelect }) {
   const [dateColumn, setDateColumn] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [xAxis, setXAxis] = useState('');
+  const [xAxis, setXAxis] = useState([]);
   const [yAxis, setYAxis] = useState([]);
+  const [dropdownOpen, setDropdownOpen] = useState(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     fetchDatabases();
@@ -59,6 +62,19 @@ function DataSelector({ onDataSelect }) {
       setDateColumn('');
     }
   }, [columns]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const fetchDatabases = async () => {
     try {
@@ -110,14 +126,14 @@ function DataSelector({ onDataSelect }) {
       return;
     }
 
-    if (!xAxis || yAxis.length === 0) {
+    if (xAxis.length === 0 || yAxis.length === 0) {
       setError('Please select both X-axis and Y-axis columns');
       setLoading(false);
       return;
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/api/query', {
+      const requestData = {
         database: selectedDatabase,
         mainTable: selectedTable,
         joinTable,
@@ -127,11 +143,15 @@ function DataSelector({ onDataSelect }) {
         dateColumn,
         startDate,
         endDate,
-        xAxis,
+        xAxis, 
         yAxis
-      });
+      };
 
-      console.log('Query response:', response.data); // Log the response data
+      console.log('Sending request with data:', requestData);
+
+      const response = await axios.post('http://localhost:5000/api/query', requestData);
+
+      console.log('Query response:', response.data);
 
       if (response.data && response.data.length > 0) {
         onDataSelect(response.data, { xAxis, yAxis });
@@ -139,242 +159,331 @@ function DataSelector({ onDataSelect }) {
         setError('No data returned from query. Please check your selection and try again.');
       }
     } catch (error) {
-      setError(error.response?.data?.error || 'Failed to fetch data');
-      console.error('Error details:', error.response?.data?.details);
+      console.error('Error in handleSubmit:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        setError(`Failed to fetch data: ${error.response.data.error || error.response.statusText}`);
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+        setError('Failed to fetch data: No response received from server');
+      } else {
+        console.error('Error message:', error.message);
+        setError(`Failed to fetch data: ${error.message}`);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="data-selector p-4 bg-background border rounded-lg">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Database selection */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Select Database:</label>
-          <select
-            value={selectedDatabase}
-            onChange={(e) => {
-              setSelectedDatabase(e.target.value);
-              setSelectedTable('');
-              setJoinTable('');
-              setJoinType('');
-              setJoinCondition('');
-            }}
-            className="w-full p-2 border rounded"
-          >
-            <option value="">Select Database</option>
-            {databases.map(db => (
-              <option key={db} value={db}>{db}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Table selection */}
-        {selectedDatabase && (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Select Main Table:</label>
-            <select
-              value={selectedTable}
-              onChange={(e) => {
-                setSelectedTable(e.target.value);
-                setJoinTable('');
-                setJoinType('');
-                setJoinCondition('');
-              }}
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Select Table</option>
-              {tables.map(table => (
-                <option key={table} value={table}>{table}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Column selection */}
-        {selectedTable && columns[selectedTable] && (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Select Columns for {selectedTable}:</label>
-            <div className="space-y-1">
-              {columns[selectedTable].map(column => (
-                <label key={column.column_name} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedColumns[selectedTable]?.includes(column.column_name) || false}
-                    onChange={() => handleColumnSelect(selectedTable, column.column_name)}
-                    className="rounded"
-                  />
-                  <span>{column.column_name} ({column.data_type})</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Date range selection */}
-        {dateColumn && (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Select Date Range:</label>
-            <div className="flex space-x-2">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="p-2 border rounded"
-              />
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="p-2 border rounded"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Join type selection */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Join Type:</label>
-          <select
-            value={joinType}
-            onChange={(e) => setJoinType(e.target.value)}
-            className="w-full p-2 border rounded"
-          >
-            <option value="">No Join</option>
-            {joinTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Join table and condition */}
-        {joinType && (
-          <>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium">Select Join Table:</label>
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Step 1: Select Database and Table</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Select Database:</label>
               <select
-                value={joinTable}
-                onChange={(e) => setJoinTable(e.target.value)}
-                className="w-full p-2 border rounded"
+                value={selectedDatabase}
+                onChange={(e) => {
+                  setSelectedDatabase(e.target.value);
+                  setSelectedTable('');
+                }}
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
               >
-                <option value="">Select Table</option>
-                {tables.filter(t => t !== selectedTable).map(table => (
-                  <option key={table} value={table}>{table}</option>
+                <option value="">Select Database</option>
+                {databases.map(db => (
+                  <option key={db} value={db}>{db}</option>
                 ))}
               </select>
             </div>
-
-            {joinTable && columns[joinTable] && (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Select Columns for {joinTable}:</label>
-                <div className="space-y-1">
-                  {columns[joinTable].map(column => (
-                    <label key={column.column_name} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedColumns[joinTable]?.includes(column.column_name) || false}
-                        onChange={() => handleColumnSelect(joinTable, column.column_name)}
-                        className="rounded"
-                      />
-                      <span>{column.column_name} ({column.data_type})</span>
-                    </label>
+            {selectedDatabase && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Select Main Table:</label>
+                <select
+                  value={selectedTable}
+                  onChange={(e) => setSelectedTable(e.target.value)}
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                  <option value="">Select Table</option>
+                  {tables.map(table => (
+                    <option key={table} value={table}>{table}</option>
                   ))}
+                </select>
+              </div>
+            )}
+            <button
+              onClick={() => setStep(2)}
+              disabled={!selectedDatabase || !selectedTable}
+              className="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        );
+      case 2:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Step 2: Join Operation</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Join Type:</label>
+              <select
+                value={joinType}
+                onChange={(e) => setJoinType(e.target.value)}
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+              >
+                <option value="">No Join</option>
+                {joinTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            {joinType && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Select Join Table:</label>
+                  <select
+                    value={joinTable}
+                    onChange={(e) => setJoinTable(e.target.value)}
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                  >
+                    <option value="">Select Table</option>
+                    {tables.filter(t => t !== selectedTable).map(table => (
+                      <option key={table} value={table}>{table}</option>
+                    ))}
+                  </select>
+                </div>
+                {joinTable && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Join Condition:</label>
+                    <div className="mt-1 flex rounded-md shadow-sm">
+                      <select
+                        value={joinCondition.split(' = ')[0] || ''}
+                        onChange={(e) => setJoinCondition(`${e.target.value} = ${joinCondition.split(' = ')[1] || ''}`)}
+                        className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300"
+                      >
+                        <option value="">Select Column from {selectedTable}</option>
+                        {columns[selectedTable]?.map(column => (
+                          <option key={column.column_name} value={`"${selectedTable}"."${column.column_name}"`}>
+                            {column.column_name}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="inline-flex items-center px-3 rounded-none border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                        =
+                      </span>
+                      <select
+                        value={joinCondition.split(' = ')[1] || ''}
+                        onChange={(e) => setJoinCondition(`${joinCondition.split(' = ')[0] || ''} = ${e.target.value}`)}
+                        className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300"
+                      >
+                        <option value="">Select Column from {joinTable}</option>
+                        {columns[joinTable]?.map(column => (
+                          <option key={column.column_name} value={`"${joinTable}"."${column.column_name}"`}>
+                            {column.column_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            <div className="flex justify-between">
+              <button
+                onClick={() => setStep(1)}
+                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={joinType && (!joinTable || !joinCondition)}
+                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+      case 3:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Step 3: Select Columns and Axes</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Select Columns:</label>
+              <div className="mt-1 max-h-40 overflow-y-auto border border-gray-300 rounded-md">
+                {Object.entries(columns).map(([table, tableColumns]) => (
+                  <div key={table} className="p-2">
+                    <h3 className="font-medium">{table}</h3>
+                    {tableColumns.map(column => (
+                      <label key={column.column_name} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedColumns[table]?.includes(column.column_name) || false}
+                          onChange={() => handleColumnSelect(table, column.column_name)}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span>{column.column_name} ({column.data_type})</span>
+                      </label>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Select X-axis column(s):</label>
+              <div className="mt-1 relative">
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen(dropdownOpen === 'x' ? null : 'x')}
+                  className="relative w-full bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2 text-left cursor-default focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                >
+                  <span className="block truncate">
+                    {xAxis.length > 0 ? `${xAxis.length} column(s) selected` : 'Select X-axis'}
+                  </span>
+                  <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
+                {dropdownOpen === 'x' && (
+                  <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                    {Object.entries(selectedColumns).flatMap(([table, cols]) =>
+                      cols.map(col => (
+                        <div
+                          key={`${table}.${col}`}
+                          className="cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-indigo-600 hover:text-white"
+                        >
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                              checked={xAxis.includes(`${table}.${col}`)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setXAxis([...xAxis, `${table}.${col}`]);
+                                } else {
+                                  setXAxis(xAxis.filter(item => item !== `${table}.${col}`));
+                                }
+                              }}
+                              disabled={yAxis.includes(`${table}.${col}`)}
+                            />
+                            <span className="ml-3 block truncate">{`${table}.${col}`}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Select Y-axis column(s):</label>
+              <div className="mt-1 relative">
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen(dropdownOpen === 'y' ? null : 'y')}
+                  className="relative w-full bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2 text-left cursor-default focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                >
+                  <span className="block truncate">
+                    {yAxis.length > 0 ? `${yAxis.length} column(s) selected` : 'Select Y-axis'}
+                  </span>
+                  <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
+                {dropdownOpen === 'y' && (
+                  <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                    {Object.entries(selectedColumns).flatMap(([table, cols]) =>
+                      cols.map(col => (
+                        <div
+                          key={`${table}.${col}`}
+                          className="cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-indigo-600 hover:text-white"
+                        >
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                              checked={yAxis.includes(`${table}.${col}`)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setYAxis([...yAxis, `${table}.${col}`]);
+                                } else {
+                                  setYAxis(yAxis.filter(item => item !== `${table}.${col}`));
+                                }
+                              }}
+                              disabled={xAxis.includes(`${table}.${col}`)}
+                            />
+                            <span className="ml-3 block truncate">{`${table}.${col}`}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            {dateColumn && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Select Date Range:</label>
+                <div className="mt-1 flex space-x-2">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  />
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  />
                 </div>
               </div>
             )}
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium">Join Condition:</label>
-              <div className="flex space-x-2">
-                <select
-                  value={joinCondition.split(' = ')[0] || ''}
-                  onChange={(e) => setJoinCondition(`${e.target.value} = ${joinCondition.split(' = ')[1] || ''}`)}
-                  className="w-1/2 p-2 border rounded"
-                >
-                  <option value="">Select Column from {selectedTable}</option>
-                  {columns[selectedTable]?.map(column => (
-                    <option key={column.column_name} value={`"${selectedTable}"."${column.column_name}"`}>
-                      {column.column_name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={joinCondition.split(' = ')[1] || ''}
-                  onChange={(e) => setJoinCondition(`${joinCondition.split(' = ')[0] || ''} = ${e.target.value}`)}
-                  className="w-1/2 p-2 border rounded"
-                >
-                  <option value="">Select Column from {joinTable}</option>
-                  {columns[joinTable]?.map(column => (
-                    <option key={column.column_name} value={`"${joinTable}"."${column.column_name}"`}>
-                      {column.column_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="flex justify-between">
+              <button
+                onClick={() => setStep(2)}
+                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              >
+                Previous
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading || xAxis.length === 0 || yAxis.length === 0}
+                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Loading...' : 'Fetch Data'}
+              </button>
             </div>
-          </>
-        )}
-
-        {/* X-axis selection */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Select X-axis column:</label>
-          <select
-            value={xAxis}
-            onChange={(e) => setXAxis(e.target.value)}
-            className="w-full p-2 border rounded"
-          >
-            <option value="">Select X-axis</option>
-            {Object.entries(selectedColumns).flatMap(([table, cols]) =>
-              cols.map(col => (
-                <option key={`${table}.${col}`} value={`${table}.${col}`}>
-                  {`${table}.${col}`}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-
-        {/* Y-axis selection */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Select Y-axis columns:</label>
-          <div className="space-y-1">
-            {Object.entries(selectedColumns).flatMap(([table, cols]) =>
-              cols.map(col => (
-                <label key={`${table}.${col}`} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={yAxis.includes(`${table}.${col}`)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setYAxis([...yAxis, `${table}.${col}`]);
-                      } else {
-                        setYAxis(yAxis.filter(item => item !== `${table}.${col}`));
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <span>{`${table}.${col}`}</span>
-                </label>
-              ))
-            )}
           </div>
-        </div>
+        );
+      default:
+        return null;
+    }
+  };
 
+  return (
+    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+      <div className="px-4 py-5 sm:p-6">
+        <div className="flex justify-between mb-4">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>1</div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>2</div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>3</div>
+        </div>
+        {renderStep()}
         {error && (
-          <div className="text-red-500 text-sm p-2 bg-red-50 rounded">
-            {error}
+          <div className="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <strong className="font-bold">Error:</strong>
+            <span className="block sm:inline"> {error}</span>
           </div>
         )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded"
-        >
-          {loading ? 'Loading...' : 'Fetch Data'}
-        </button>
-      </form>
+      </div>
     </div>
   );
 }

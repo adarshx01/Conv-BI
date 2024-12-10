@@ -29,30 +29,38 @@ ChartJS.register(
   Filler
 );
 
-const colorPalette = [
-  'rgba(255, 99, 132, 0.8)',   // Red
-  'rgba(54, 162, 235, 0.8)',   // Blue
-  'rgba(255, 206, 86, 0.8)',   // Yellow
-  'rgba(75, 192, 192, 0.8)',   // Teal
-  'rgba(153, 102, 255, 0.8)',  // Purple
-  'rgba(255, 159, 64, 0.8)',   // Orange
-  'rgba(0, 204, 150, 0.8)',    // Green
-  'rgba(255, 99, 255, 0.8)',   // Pink
-  'rgba(128, 0, 0, 0.8)',      // Maroon
-  'rgba(0, 128, 128, 0.8)',    // Dark Teal
-  'rgba(0, 0, 128, 0.8)',      // Navy
-  'rgba(128, 128, 0, 0.8)',    // Olive
-  'rgba(128, 0, 128, 0.8)',    // Purple
-  'rgba(0, 128, 0, 0.8)',      // Dark Green
-  'rgba(255, 0, 255, 0.8)',    // Magenta
-  'rgba(0, 255, 255, 0.8)',    // Cyan
-  'rgba(128, 128, 128, 0.8)',  // Gray
-  'rgba(192, 192, 192, 0.8)',  // Silver
-  'rgba(255, 215, 0, 0.8)',    // Gold
-  'rgba(165, 42, 42, 0.8)',    // Brown
-];
+const getUniqueColors = (count) => {
+  const hueStep = 360 / count;
+  return Array.from({ length: count }, (_, i) => {
+    const hue = i * hueStep;
+    return `hsla(${hue}, 70%, 60%, 0.8)`;
+  });
+};
 
-const getColor = (index) => colorPalette[index % colorPalette.length];
+// const colorPalette = [
+//   'rgba(255, 99, 132, 0.8)',   // Red
+//   'rgba(54, 162, 235, 0.8)',   // Blue
+//   'rgba(255, 206, 86, 0.8)',   // Yellow
+//   'rgba(75, 192, 192, 0.8)',   // Teal
+//   'rgba(153, 102, 255, 0.8)',  // Purple
+//   'rgba(255, 159, 64, 0.8)',   // Orange
+//   'rgba(0, 204, 150, 0.8)',    // Green
+//   'rgba(255, 99, 255, 0.8)',   // Pink
+//   'rgba(128, 0, 0, 0.8)',      // Maroon
+//   'rgba(0, 128, 128, 0.8)',    // Dark Teal
+//   'rgba(0, 0, 128, 0.8)',      // Navy
+//   'rgba(128, 128, 0, 0.8)',    // Olive
+//   'rgba(128, 0, 128, 0.8)',    // Purple
+//   'rgba(0, 128, 0, 0.8)',      // Dark Green
+//   'rgba(255, 0, 255, 0.8)',    // Magenta
+//   'rgba(0, 255, 255, 0.8)',    // Cyan
+//   'rgba(128, 128, 128, 0.8)',  // Gray
+//   'rgba(192, 192, 192, 0.8)',  // Silver
+//   'rgba(255, 215, 0, 0.8)',    // Gold
+//   'rgba(165, 42, 42, 0.8)',    // Brown
+// ];
+
+// const getColor = (index) => colorPalette[index % colorPalette.length];
 
 const chartOptions = {
   responsive: true,
@@ -134,7 +142,9 @@ function ElementRenderer({ element, onUpdate }) {
         onUpdate(element.id, { data: selectedData });
       } else {
         const { xAxis, yAxis } = axisInfo;
-        const [xTable, xColumn] = xAxis.split('.');
+
+        // Ensure xAxis is always an array
+        const xAxisArray = Array.isArray(xAxis) ? xAxis : [xAxis];
 
         const datasets = yAxis.map((y, index) => {
           const [yTable, yColumn] = y.split('.');
@@ -148,11 +158,13 @@ function ElementRenderer({ element, onUpdate }) {
             return null;
           }
 
+          const uniqueColors = getUniqueColors(yData.length);
+
           return {
             label: yColumn,
             data: yData,
-            backgroundColor: getColor(index),
-            borderColor: getColor(index).replace('0.8', '1'),
+            backgroundColor: uniqueColors,
+            borderColor: uniqueColors.map(color => color.replace('0.8', '1')),
             borderWidth: 1,
             fill: element.type === 'area' || element.type === 'stackedBar',
             tension: 0.4,
@@ -165,7 +177,8 @@ function ElementRenderer({ element, onUpdate }) {
         }
 
         const newChartData = {
-          labels: selectedData.map(row => row[xColumn]),
+          // Use the first column of xAxis if it's an array
+          labels: selectedData.map(row => row[xAxisArray[0].split('.')[1]]),
           datasets: datasets,
         };
 
@@ -179,6 +192,39 @@ function ElementRenderer({ element, onUpdate }) {
 
   const renderChart = () => {
     if (!chartData) return null;
+
+    if (element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie') {
+      const labels = chartData.labels;
+      const data = chartData.datasets[0].data;
+      const colors = getUniqueColors(data.length);
+
+      const pieChartData = {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors,
+          borderColor: colors.map(color => color.replace('0.8', '1')),
+          borderWidth: 1,
+        }],
+      };
+
+      return (
+        <div id={`chart-${element.id}`} className="w-full h-full p-4 bg-white rounded-lg shadow-sm">
+          <ChartComponent
+            ref={chartRef}
+            data={pieChartData}
+            options={{
+              ...chartSpecificOptions,
+              ...(element.type === 'halfPie' && {
+                rotation: -90,
+                circumference: 180,
+              }),
+            }}
+          />
+        </div>
+      );
+    }
+
 
     const ChartComponent = {
       bar: Bar,
@@ -201,7 +247,7 @@ function ElementRenderer({ element, onUpdate }) {
           ...chartOptions.scales.x,
           title: {
             display: true,
-            text: chartData.labels[0],
+            text: Array.isArray(element.xAxis) ? element.xAxis.join(', ') : element.xAxis,
           },
         },
         y: {
@@ -212,13 +258,20 @@ function ElementRenderer({ element, onUpdate }) {
           },
         },
       },
+      plugins: {
+        ...chartOptions.plugins,
+        legend: {
+          ...chartOptions.plugins.legend,
+          display: element.type !== 'bar' && element.type !== 'line',
+        },
+      },
     };
 
     return (
       <div id={`chart-${element.id}`} className="w-full h-full p-4 bg-white rounded-lg shadow-sm">
-        <ChartComponent 
+        <ChartComponent
           ref={chartRef}
-          data={chartData} 
+          data={chartData}
           options={chartSpecificOptions}
         />
       </div>
@@ -295,7 +348,7 @@ function ElementRenderer({ element, onUpdate }) {
       );
     case 'shape':
       return (
-        <div 
+        <div
           className="w-full h-full bg-blue-500 rounded-lg"
           style={{ clipPath: element.shape === 'circle' ? 'circle(50% at 50% 50%)' : 'none' }}
         />

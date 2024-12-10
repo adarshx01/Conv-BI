@@ -26,7 +26,7 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
 
   return (
     <div className="flex flex-col items-center">
-      <div className="flex items-center justify-center mb-4">
+      <div className="flex items-center justify-center mb-2">
         <p className='text-[1rem] mr-8'>Page : </p>
         <button
           className="px-2 py-1 mr-2 text-gray-600 border border-gray-600 rounded-md hover:bg-gray-200"
@@ -79,12 +79,12 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
         {pages.map((page) => (
           <div
             key={page.id}
-            className={`flex items-center justify-between w-full px-4 py-2 mb-2 border border-gray-400 rounded-md cursor-pointer ${
+            className={`flex items-center justify-between w-48 px-4 py-2 mb-2 border border-gray-400 rounded-md cursor-pointer rounded-xl ${
               currentPageId === page.id ? 'bg-gray-200' : 'hover:bg-gray-100'
             }`}
             onClick={() => onPageChange(page.id)}
           >
-            <div className="flex items-center">
+            <div className="flex items-center mx-1">
               <span className="mr-2 font-semibold">Page {page.id}</span>
               {currentPageId === page.id && (
                 <span className="px-2 py-1 text-white bg-green-500 rounded-md">
@@ -93,7 +93,7 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
               )}
             </div>
             <button
-              className="text-gray-600 hover:text-gray-800"
+              className="text-gray-600 hover:text-gray-800 ml-1"
               onClick={(e) => {
                 e.stopPropagation();
                 handlePageRemove(page.id);
