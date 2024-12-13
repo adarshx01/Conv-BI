@@ -1,18 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import DataSelector from './DataSelector';
 import { TableElement } from './TableElement';
 
@@ -32,10 +20,8 @@ ChartJS.register(
 const getUniqueColors = (count) => {
   const hueStep = 360 / count;
   return Array.from({ length: count }, (_, i) => {
-    let hue = i * hueStep;
-    const randomVariation = (Math.random() - 0.5) * hueStep * 0.5;
-    hue = (hue + randomVariation) % 360;     
-    return `hsla(${hue}, 70%, 60%, 0.8)`;
+    const hue = (i * hueStep) % 360;
+    return `hsla(${hue}, 100%, 50%, 0.8)`;
   });
 };
 
@@ -56,10 +42,10 @@ const chartOptions = {
     tooltip: {
       mode: 'index',
       intersect: false,
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      titleColor: '#000',
-      bodyColor: '#666',
-      borderColor: '#ddd',
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      titleColor: '#fff',
+      bodyColor: '#fff',
+      borderColor: '#fff',
       borderWidth: 1,
       padding: 12,
       boxPadding: 6,
@@ -69,8 +55,7 @@ const chartOptions = {
   scales: {
     x: {
       grid: {
-        display: true,
-        color: 'rgba(0, 0, 0, 0.05)',
+        display: false,
       },
       ticks: {
         font: {
@@ -81,8 +66,7 @@ const chartOptions = {
     y: {
       beginAtZero: true,
       grid: {
-        display: true,
-        color: 'rgba(0, 0, 0, 0.05)',
+        display: false,
       },
       ticks: {
         font: {
@@ -95,6 +79,21 @@ const chartOptions = {
     duration: 1000,
     easing: 'easeInOutQuart',
   },
+};
+
+const BarLineChart = ({ data, options }) => {
+  return (
+    <Bar
+      data={{
+        ...data,
+        datasets: data.datasets.map((dataset, index) => ({
+          ...dataset,
+          type: index === 0 ? 'bar' : 'line',
+        })),
+      }}
+      options={options}
+    />
+  );
 };
 
 function ElementRenderer({ element, onUpdate, customData }) {
@@ -153,15 +152,12 @@ function ElementRenderer({ element, onUpdate, customData }) {
           return {
             label: yColumn,
             data: yData,
-            backgroundColor: element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie' 
-              ? getUniqueColors(yData.length)
-              : uniqueColors[index],
-            borderColor: element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie'
-              ? 'rgba(255, 255, 255, 0.8)'
-              : uniqueColors[index].replace('0.8', '1'),
-            borderWidth: 1,
+            backgroundColor: element.type === 'barLine' && index === 0 ? uniqueColors[index] : (element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie' ? getUniqueColors(yData.length) : 'transparent'),
+            borderColor: element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie' ? 'rgba(255, 255, 255, 1)' : uniqueColors[index],
+            borderWidth: 2,
             fill: element.type === 'area' || element.type === 'stackedBar',
             tension: 0.4,
+            ...(element.type === 'barLine' && index > 0 && { type: 'line' }),
           };
         }).filter(dataset => dataset !== null);
 
@@ -196,76 +192,61 @@ function ElementRenderer({ element, onUpdate, customData }) {
       pie: Pie,
       halfPie: Pie,
       hollowPie: Doughnut,
-      barLine: Bar,
-    }[element.type] || Bar;  // Default to Bar if type is not recognized
+      barLine: BarLineChart,
+    }[element.type] || Bar;
 
     const chartSpecificOptions = {
       ...chartOptions,
       indexAxis: element.type === 'stripedBar' ? 'y' : 'x',
       scales: {
+        ...chartOptions.scales,
         x: {
           ...chartOptions.scales.x,
           stacked: element.type === 'stackedBar' || element.type === 'stripedBar',
-          title: {
-            display: true,
-            text: Array.isArray(element.xAxis) ? element.xAxis.join(', ') : element.xAxis,
-          },
         },
         y: {
           ...chartOptions.scales.y,
           stacked: element.type === 'stackedBar' || element.type === 'stripedBar',
-          title: {
-            display: true,
-            text: chartData.datasets.map(ds => ds.label).join(', '),
-          },
-        },
-      },
-      plugins: {
-        ...chartOptions.plugins,
-        legend: {
-          ...chartOptions.plugins.legend,
-          display: element.type !== 'bar' && element.type !== 'line',
         },
       },
     };
 
-    // Pie chart specific handling
-    if (element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie') {
-      const pieChartData = {
-        labels: chartData.labels,
-        datasets: [{
-          data: chartData.datasets[0].data,
-          backgroundColor: getUniqueColors(chartData.datasets[0].data.length),
-          borderColor: 'rgba(255, 255, 255, 0.8)',
-          borderWidth: 2,
-        }],
-      };
-
-      const pieOptions = {
-        ...chartSpecificOptions,
-        ...(element.type === 'halfPie' && {
-          rotation: -90,
-          circumference: 180,
-        }),
-      };
-
-      return (
-        <div id={`chart-${element.id}`} className="w-full h-full p-4 bg-white rounded-lg shadow-sm">
-          <ChartComponent
-            ref={chartRef}
-            data={pieChartData}
-            options={pieOptions}
-          />
-        </div>
-      );
+    // Remove axes for pie charts
+    if (['pie', 'halfPie', 'hollowPie'].includes(element.type)) {
+      delete chartSpecificOptions.scales;
     }
 
+    const pieChartData = {
+      labels: chartData.labels,
+      datasets: [{
+        data: chartData.datasets[0].data,
+        backgroundColor: getUniqueColors(chartData.datasets[0].data.length),
+        borderColor: 'rgba(255, 255, 255, 1)',
+        borderWidth: 2,
+      }],
+    };
+
+    const pieOptions = {
+      ...chartSpecificOptions,
+      plugins: {
+        ...chartSpecificOptions.plugins,
+        legend: {
+          ...chartSpecificOptions.plugins.legend,
+          position: 'bottom',
+        },
+      },
+      ...(element.type === 'halfPie' && {
+        rotation: -90,
+        circumference: 180,
+      }),
+    };
+
     return (
-      <div id={`chart-${element.id}`} className="w-full h-full p-4 bg-white rounded-lg shadow-sm">
+      <div id={`chart-${element.id}`} className="w-full h-full p-1 rounded-lg shadow-sm">
         <ChartComponent
           ref={chartRef}
-          data={chartData}
-          options={chartSpecificOptions}
+          data={['pie', 'halfPie', 'hollowPie'].includes(element.type) ? pieChartData : chartData}
+          options={['pie', 'halfPie', 'hollowPie'].includes(element.type) ? pieOptions : chartSpecificOptions}
         />
       </div>
     );
@@ -358,3 +339,4 @@ function ElementRenderer({ element, onUpdate, customData }) {
 }
 
 export default ElementRenderer;
+
