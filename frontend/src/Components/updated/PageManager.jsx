@@ -25,8 +25,8 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
   };
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="flex items-center justify-center mb-2">
+    <div className="flex flex-col items-center h-44">
+      <div className="flex items-center justify-center mb-2 ">
         <p className='text-[1rem] mr-8'>Page : </p>
         <button
           className="px-2 py-1 mr-2 text-gray-600 border border-gray-600 rounded-md hover:bg-gray-200"
@@ -75,7 +75,7 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
         </div>
       </div>
 
-      <div className="flex flex-col items-center max-h-28 overflow-y-auto w-full overflow-y-auto">
+      <div className="flex flex-col items-center max-h-28 overflow-y-auto w-full ">
         {pages.map((page) => (
           <div
             key={page.id}

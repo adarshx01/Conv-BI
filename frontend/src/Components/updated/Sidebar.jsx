@@ -127,7 +127,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
           />
         ))}
       </div>
-      <div className='p-2 border-2 mx-2 rounded-xl mt-24'>
+      <div className='p-2 border-2 mx-4  rounded-xl mt-24'>
         <p className='font-semibold text-[1rem] text-center'>Page Settings</p>
         <hr className='mb-4'></hr>
         <PageManager
