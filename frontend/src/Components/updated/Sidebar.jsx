@@ -1,28 +1,7 @@
 import React, { useState } from 'react';
 import { useDrag } from 'react-dnd';
-import { 
-  BarChart, 
-  LineChart, 
-  PieChart, 
-  AreaChart, 
-  Layers, 
-  BarChartHorizontal, 
-  PieChartIcon, 
-  Donut, 
-  TrendingUp, 
-  Image, 
-  Type, 
-  Square, 
-  Circle, 
-  Triangle, 
-  Smile, 
-  Table, 
-  Star,
-  Share,
-  ShareIcon
-} from 'lucide-react';
+import { BarChart, LineChart, PieChart, AreaChart, Layers, BarChartHorizontal, PieChartIcon, Donut, TrendingUp, Image, Type, Square, Circle, Triangle, Smile, Table, Star, Share, ShareIcon, Save, Upload } from 'lucide-react';
 import PageManager from './PageManager';
-import { Save } from 'react-feather';
 
 const DraggableElement = ({ type, icon: Icon, label, onAdd }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
@@ -72,7 +51,7 @@ const elementCategories = {
   ],
 };
 
-function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, onPageRemove, onCanvasResize ,onExport }) {
+function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, onPageRemove, onCanvasResize, onExport, onSave, onLoad }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('charts');
 
@@ -84,10 +63,17 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
     <div className="sidebar">
       <div className='my-3 mx-auto flex flex-row'>
         <button 
-          onClick={() => {}} 
+          onClick={onSave} 
           className='flex items-center border-2 rounded-3xl px-3 mx-1 h-10 space-x-2 hover:bg-green-300 focus:bg-violet-400'>
           <Save className='w-5 h-5' /> 
           <span>Save Report</span>
+        </button>
+
+        <button 
+          onClick={onLoad} 
+          className='flex items-center border-2 rounded-3xl px-3 mx-1 h-10 space-x-2 hover:bg-green-300 focus:bg-violet-400'>
+          <Upload className='w-5 h-5' /> 
+          <span>Load Report</span>
         </button>
 
         <button 
@@ -144,3 +130,4 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
 }
 
 export default Sidebar;
+

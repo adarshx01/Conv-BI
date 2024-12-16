@@ -54,6 +54,7 @@ const chartOptions = {
   },
   scales: {
     x: {
+      display: true,
       grid: {
         display: false,
       },
@@ -64,6 +65,7 @@ const chartOptions = {
       },
     },
     y: {
+      display: true,
       beginAtZero: true,
       grid: {
         display: false,
@@ -105,6 +107,7 @@ function ElementRenderer({ element, onUpdate, customData }) {
   useEffect(() => {
     if (customData) {
       console.log("Custom data received:", customData);
+      handleDataSelect(customData, element.axisInfo);
     }
   }, [customData]);
 
@@ -128,51 +131,94 @@ function ElementRenderer({ element, onUpdate, customData }) {
         // Ensure xAxis is always an array
         const xAxisArray = Array.isArray(xAxis) ? xAxis : [xAxis];
 
-        // Process X-axis data
-        const xData = xAxisArray.map(x => {
-          const [xTable, xColumn] = x.split('.');
-          return selectedData.map(row => row[xColumn]);
-        });
+        // Check if the data is in the monthly/yearly format
+        const isAggregatedData = selectedData[0].hasOwnProperty('period');
 
-        // Process Y-axis data
-        const datasets = yAxis.map((y, index) => {
-          const [yTable, yColumn] = y.split('.');
-          const yData = selectedData.map(row => {
-            const value = parseFloat(row[yColumn]);
-            return isNaN(value) ? null : value;
+        let labels, datasets;
+
+        if (isAggregatedData) {
+          // Process aggregated data (monthly/yearly)
+          labels = selectedData.map(item => item.period);
+          const metrics = Object.keys(selectedData[0]).filter(key => key !== 'period');
+        
+          datasets = metrics.flatMap(metric => {
+            const highestData = selectedData.map(item => item[metric]?.highest);
+            const lowestData = selectedData.map(item => item[metric]?.lowest);
+            const averageData = selectedData.map(item => item[metric]?.average);
+
+            return [
+              {
+                label: `${metric} (Highest)`,
+                data: highestData,
+                backgroundColor: getUniqueColors(metrics.length * 3)[0],
+                borderColor: getUniqueColors(metrics.length * 3)[0],
+                borderWidth: 2,
+                fill: false,
+              },
+              {
+                label: `${metric} (Lowest)`,
+                data: lowestData,
+                backgroundColor: getUniqueColors(metrics.length * 3)[1],
+                borderColor: getUniqueColors(metrics.length * 3)[1],
+                borderWidth: 2,
+                fill: false,
+              },
+              {
+                label: `${metric} (Average)`,
+                data: averageData,
+                backgroundColor: getUniqueColors(metrics.length * 3)[2],
+                borderColor: getUniqueColors(metrics.length * 3)[2],
+                borderWidth: 2,
+                fill: false,
+              }
+            ];
+          });
+        } else {
+          // Process regular data
+          // Process X-axis data
+          const xData = xAxisArray.map(x => {
+            const [xTable, xColumn] = x.split('.');
+            return selectedData.map(row => row[xColumn]);
           });
 
-          if (yData.every(val => val === null)) {
-            setError(`No valid numeric data available for ${yColumn}. Please check your selection.`);
-            return null;
-          }
+          labels = xData[0];
 
-          const uniqueColors = getUniqueColors(yAxis.length);
+          // Process Y-axis data
+          datasets = yAxis.map((y, index) => {
+            const [yTable, yColumn] = y.split('.');
+            const yData = selectedData.map(row => {
+              const value = parseFloat(row[yColumn]);
+              return isNaN(value) ? null : value;
+            });
 
-          return {
-            label: yColumn,
-            data: yData,
-            backgroundColor: element.type === 'barLine' && index === 0 ? uniqueColors[index] : (element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie' ? getUniqueColors(yData.length) : 'transparent'),
-            borderColor: element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie' ? 'rgba(255, 255, 255, 1)' : uniqueColors[index],
-            borderWidth: 2,
-            fill: element.type === 'area' || element.type === 'stackedBar',
-            tension: 0.4,
-            ...(element.type === 'barLine' && index > 0 && { type: 'line' }),
-          };
-        }).filter(dataset => dataset !== null);
+            if (yData.every(val => val === null)) {
+              setError(`No valid numeric data available for ${yColumn}. Please check your selection.`);
+              return null;
+            }
+
+            const uniqueColors = getUniqueColors(yAxis.length);
+
+            return {
+              label: yColumn,
+              data: yData,
+              backgroundColor: element.type === 'barLine' && index === 0 ? uniqueColors[index] : (element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie' ? getUniqueColors(yData.length) : 'transparent'),
+              borderColor: element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie' ? 'rgba(255, 255, 255, 1)' : uniqueColors[index],
+              borderWidth: 2,
+              fill: element.type === 'area' || element.type === 'stackedBar',
+              tension: 0.4,
+              ...(element.type === 'barLine' && index > 0 && { type: 'line' }),
+            };
+          }).filter(dataset => dataset !== null);
+        }
 
         if (datasets.length === 0) {
           setError("No valid data available for the selected columns. Please check your selection.");
           return;
         }
 
-        const newChartData = {
-          labels: xData[0], // Use the first X-axis column as labels
-          datasets: datasets,
-        };
-
+        const newChartData = { labels, datasets };
         setChartData(newChartData);
-        onUpdate(element.id, { chartData: newChartData });
+        onUpdate(element.id, { chartData: newChartData, axisInfo });
       }
     } else {
       setError("No data returned from the query. Please check your selection and try again.");

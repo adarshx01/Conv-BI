@@ -7,10 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Canvas {
+model Report {
   id        String   @id @default(cuid())
   name      String
-  content   Json
+  data      Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

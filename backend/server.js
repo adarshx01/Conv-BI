@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
-const DataReducer = require('./DataReducer'); // Import DataReducer
+const DataReducer = require('./DataReducer');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -80,7 +80,7 @@ app.get('/api/columns/:database/:table', async (req, res) => {
 });
 
 app.post('/api/query', async (req, res) => {
-  const { database, mainTable, joinTable, selectedColumns, joinType, joinCondition, dateColumn, startDate, endDate } = req.body;
+  const { database, mainTable, joinTable, selectedColumns, joinType, joinCondition, dateColumn, startDate, endDate, xAxis, yAxis, dataType } = req.body;
   try {
     if (!pools[database]) {
       pools[database] = new Pool({
@@ -90,8 +90,8 @@ app.post('/api/query', async (req, res) => {
     }
 
     // Construct column list
-    const mainColumns = selectedColumns[mainTable].map(col => `"${mainTable}"."${col}"`);
-    const joinColumns = selectedColumns[joinTable] ? selectedColumns[joinTable].map(col => `"${joinTable}"."${col}"`) : [];
+    const mainColumns = selectedColumns[mainTable].map(col => `"${mainTable}"."${col}" AS "${col}"`);
+    const joinColumns = selectedColumns[joinTable] ? selectedColumns[joinTable].map(col => `"${joinTable}"."${col}" AS "${col}"`) : [];
     const allColumns = [...mainColumns, ...joinColumns];
     
     // Construct the query
@@ -111,21 +111,30 @@ app.post('/api/query', async (req, res) => {
       }
     }
 
+    // Add ORDER BY clause for date column if it exists
+    if (dateColumn) {
+      query += ` ORDER BY "date"`;
+    }
+
     console.log('Executing query:', query);
     const result = await pools[database].query(query);
     let data = result.rows;
 
-    // Apply data reduction
-    const MAX_DATA_POINTS = 20; // Threshold for maximum data points
+    if (dataType === 'Default') {
+      const MAX_DATA_POINTS = 100; // Adjust as needed
 
-    if (data.length > MAX_DATA_POINTS) {
-      data = DataReducer.reduceDataset(data, {
-        maxDataPoints: MAX_DATA_POINTS,
-        preservePeaks: true,
-        smoothingMethod: 'slidingWindow', // 'weightedAverage' or 'uniformSampling'
-        smoothingWindow: 5, // Adjust as needed
-        peakPreservationThreshold: 0.1 // Adjust as needed
-      });
+      if (data.length > MAX_DATA_POINTS) {
+        data = DataReducer.reduceDataset(data, {
+          maxDataPoints: MAX_DATA_POINTS,
+          preservePeaks: true,
+          smoothingMethod: 'slidingWindow',
+          smoothingWindow: 5,
+          peakPreservationThreshold: 0.1
+        });
+      }
+    } else if (dataType === 'Monthly' || dataType === 'Yearly') {
+      // Process data for Monthly or Yearly view
+      data = processDataForPeriod(data, dataType, dateColumn);
     }
 
     res.json(data);
@@ -139,6 +148,52 @@ app.post('/api/query', async (req, res) => {
   }
 });
 
+function processDataForPeriod(data, period, dateColumn) {
+  // Extract the actual column name from dateColumn (remove table prefix if present)
+  const dateColumnName = dateColumn.split('.').pop();
+
+  // Group data by period (month or year)
+  const groupedData = data.reduce((acc, row) => {
+    const date = new Date(row[dateColumnName]);
+    const key = period === 'Monthly' 
+      ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      : `${date.getFullYear()}`;
+    
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    acc[key].push(row);
+    return acc;
+  }, {});
+
+  // Calculate highest, lowest, and average for each period
+  return Object.entries(groupedData).map(([periodKey, periodData]) => {
+    const numericColumns = Object.keys(periodData[0]).filter(key => 
+      typeof periodData[0][key] === 'number' && key !== dateColumnName
+    );
+    
+    const stats = numericColumns.reduce((acc, column) => {
+      const values = periodData.map(row => row[column]).filter(val => !isNaN(val));
+      if (values.length > 0) {
+        acc[column] = {
+          highest: Math.max(...values),
+          lowest: Math.min(...values),
+          average: values.reduce((sum, val) => sum + val, 0) / values.length
+        };
+      } else {
+        acc[column] = { highest: null, lowest: null, average: null };
+      }
+      return acc;
+    }, {});
+
+    return {
+      period: periodKey,
+      ...stats
+    };
+  });
+}
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+

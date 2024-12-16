@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import Canvas from './Canvas';
 import ExportModal from './ExportModal';
+import LoadReportModal from './LoadReportModal';
+import SaveReportModal from './SaveReportModal';
 import './styles/App.css';
 
 function App() {
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
   const [pages, setPages] = useState([
     { id: 1, elements: [], canvasSize: { width: 1200, height: 800 } }
   ]);
@@ -40,7 +43,7 @@ function App() {
   };
 
   const handlePageAdd = () => {
-    const newPageId = pages.length + 1;
+    const newPageId = Math.max(...pages.map(page => page.id)) + 1;
     setPages([...pages, { id: newPageId, elements: [], canvasSize: { width: 1200, height: 800 } }]);
     setCurrentPageId(newPageId);
   };
@@ -52,7 +55,7 @@ function App() {
   const handlePageRemove = (pageId) => {
     if (pages.length > 1) {
       setPages(prevPages => prevPages.filter(page => page.id !== pageId));
-      setCurrentPageId(currentPageId > pageId ? currentPageId - 1 : currentPageId);
+      setCurrentPageId(prev => prev === pageId ? Math.min(...pages.map(p => p.id).filter(id => id !== pageId)) : prev);
     }
   };
 
@@ -72,10 +75,32 @@ function App() {
     );
   };
 
+  const handleSaveReport = () => {
+    setShowSaveModal(true);
+  };
+
+  const handleLoadReport = () => {
+    setShowLoadModal(true);
+  };
+
+  const onReportSaved = (savedReport) => {
+    console.log('Report saved:', savedReport);
+    // You can add any additional logic here after a report is saved
+  };
+
+  const onReportLoaded = (loadedReport) => {
+    if (loadedReport && loadedReport.pages && loadedReport.currentPageId) {
+      setPages(loadedReport.pages);
+      setCurrentPageId(loadedReport.currentPageId);
+    } else {
+      console.error('Invalid report data structure:', loadedReport);
+      // You might want to show an error message to the user here
+    }
+  };
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="app">
-        {/* <Navbar onExport={handleExport} /> */}
         <div className="main-content">
           <div className="canvas-container">
             {pages.map(page => (
@@ -98,6 +123,8 @@ function App() {
             onPageRemove={handlePageRemove}
             onCanvasResize={handleCanvasResize}
             onExport={handleExport}
+            onSave={handleSaveReport}
+            onLoad={handleLoadReport}
           />
         </div>
         {showExportModal && (
@@ -106,9 +133,23 @@ function App() {
             pages={pages}
           />
         )}
+        {showLoadModal && (
+          <LoadReportModal
+            onClose={() => setShowLoadModal(false)}
+            onLoad={onReportLoaded}
+          />
+        )}
+        {showSaveModal && (
+          <SaveReportModal
+            onClose={() => setShowSaveModal(false)}
+            onSave={onReportSaved}
+            reportData={{ pages, currentPageId }}
+          />
+        )}
       </div>
     </DndProvider>
   );
 }
 
 export default App;
+

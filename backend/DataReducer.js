@@ -8,12 +8,12 @@ class DataReducer {
    * @returns {Array} 
    */
   static reduceDataset(data, options = {}) {
-    if (!data || data.length <= options.maxDataPoints) {
+    if (!data || data.length <= options.maxDataPoints || data[0].hasOwnProperty('period')) {
       return data;
     }
 
     const {
-      maxDataPoints = 100,  // Default max number of data points
+      maxDataPoints = 20,  // Default max number of data points
       preservePeaks = true,
       smoothingMethod = 'slidingWindow',
       smoothingWindow = 5,
