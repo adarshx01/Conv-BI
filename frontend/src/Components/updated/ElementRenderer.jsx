@@ -181,15 +181,31 @@ function ElementRenderer({ element, onUpdate, customData }) {
             return selectedData.map(row => row[xColumn]);
           });
 
-          labels = xData[0];
+          // Combine data points with the same x-axis value
+          const combinedData = {};
+          xData[0].forEach((xValue, index) => {
+            if (!combinedData[xValue]) {
+              combinedData[xValue] = {};
+              yAxis.forEach(y => {
+                const [yTable, yColumn] = y.split('.');
+                combinedData[xValue][yColumn] = 0;
+              });
+            }
+            yAxis.forEach(y => {
+              const [yTable, yColumn] = y.split('.');
+              const value = parseFloat(selectedData[index][yColumn]);
+              if (!isNaN(value)) {
+                combinedData[xValue][yColumn] += value;
+              }
+            });
+          });
+
+          labels = Object.keys(combinedData);
 
           // Process Y-axis data
           datasets = yAxis.map((y, index) => {
             const [yTable, yColumn] = y.split('.');
-            const yData = selectedData.map(row => {
-              const value = parseFloat(row[yColumn]);
-              return isNaN(value) ? null : value;
-            });
+            const yData = labels.map(label => combinedData[label][yColumn]);
 
             if (yData.every(val => val === null)) {
               setError(`No valid numeric data available for ${yColumn}. Please check your selection.`);
@@ -386,3 +402,4 @@ function ElementRenderer({ element, onUpdate, customData }) {
 
 export default ElementRenderer;
 
+  
