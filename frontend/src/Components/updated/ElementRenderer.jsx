@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
-import DataSelector from './DataSelector';
+import ChartDropZone from './ChartDropZone';
 import { TableElement } from './TableElement';
 
 ChartJS.register(
@@ -17,12 +17,25 @@ ChartJS.register(
   Filler
 );
 
+const colorPalette = [
+  '#CDC1FF', '#FCC737', '#A8CD89', '#9694FF', '#A1EEBD', 
+  '#4CC9FE', '#2E236C', '#E68369', '#FF7EE2', '#BBE9FF', 
+  '#FFD1E3', '#FA7070', '#AD88C6', '#15F5BA', '#7ED7C1',
+  '#89B9AD', '#C7DCA7', '#FFC436', '#FF8989', '#9DB2BF'
+];
 const getUniqueColors = (count) => {
   const hueStep = 360 / count;
   return Array.from({ length: count }, (_, i) => {
     const hue = (i * hueStep) % 360;
     return `hsla(${hue}, 100%, 50%, 0.8)`;
   });
+};
+const getColors = (count) => {
+  const colors = [];
+  for (let i = 0; i < count; i++) {
+    colors.push(colorPalette[i % colorPalette.length]);
+  }
+  return colors;
 };
 
 const chartOptions = {
@@ -98,18 +111,13 @@ const BarLineChart = ({ data, options }) => {
   );
 };
 
-function ElementRenderer({ element, onUpdate, customData }) {
+
+function ElementRenderer({ element, onUpdate }) {
   const [data, setData] = useState(element.data || null);
   const [chartData, setChartData] = useState(element.chartData || null);
   const [error, setError] = useState(null);
+  const [axisInfo, setAxisInfo] = useState(element.axisInfo || { xAxis: [], yAxis: [] });
   const chartRef = useRef(null);
-
-  useEffect(() => {
-    if (customData) {
-      console.log("Custom data received:", customData);
-      handleDataSelect(customData, element.axisInfo);
-    }
-  }, [customData]);
 
   useEffect(() => {
     if (chartRef.current) {
@@ -119,126 +127,174 @@ function ElementRenderer({ element, onUpdate, customData }) {
     }
   }, [chartData]);
 
-  const handleDataSelect = (selectedData, axisInfo) => {
+  const handleDataSelect = (selectedData, newAxisInfo) => {
+    setAxisInfo(newAxisInfo);
     setError(null);
     if (selectedData && selectedData.length > 0) {
       if (element.type === 'table') {
         setData(selectedData);
+
+        console.log('selected data', selectedData);
         onUpdate(element.id, { data: selectedData });
       } else {
-        const { xAxis, yAxis } = axisInfo;
-
-        // Ensure xAxis is always an array
-        const xAxisArray = Array.isArray(xAxis) ? xAxis : [xAxis];
-
-        // Check if the data is in the monthly/yearly format
-        const isAggregatedData = selectedData[0].hasOwnProperty('period');
-
-        let labels, datasets;
-
-        if (isAggregatedData) {
-          // Process aggregated data (monthly/yearly)
-          labels = selectedData.map(item => item.period);
-          const metrics = Object.keys(selectedData[0]).filter(key => key !== 'period');
-        
-          datasets = metrics.flatMap(metric => {
-            const highestData = selectedData.map(item => item[metric]?.highest);
-            const lowestData = selectedData.map(item => item[metric]?.lowest);
-            const averageData = selectedData.map(item => item[metric]?.average);
-
-            return [
-              {
-                label: `${metric} (Highest)`,
-                data: highestData,
-                backgroundColor: getUniqueColors(metrics.length * 3)[0],
-                borderColor: getUniqueColors(metrics.length * 3)[0],
-                borderWidth: 2,
-                fill: false,
-              },
-              {
-                label: `${metric} (Lowest)`,
-                data: lowestData,
-                backgroundColor: getUniqueColors(metrics.length * 3)[1],
-                borderColor: getUniqueColors(metrics.length * 3)[1],
-                borderWidth: 2,
-                fill: false,
-              },
-              {
-                label: `${metric} (Average)`,
-                data: averageData,
-                backgroundColor: getUniqueColors(metrics.length * 3)[2],
-                borderColor: getUniqueColors(metrics.length * 3)[2],
-                borderWidth: 2,
-                fill: false,
-              }
-            ];
-          });
-        } else {
-          // Process regular data
-          // Process X-axis data
-          const xData = xAxisArray.map(x => {
-            const [xTable, xColumn] = x.split('.');
-            return selectedData.map(row => row[xColumn]);
-          });
-
-          // Combine data points with the same x-axis value
-          const combinedData = {};
-          xData[0].forEach((xValue, index) => {
-            if (!combinedData[xValue]) {
-              combinedData[xValue] = {};
-              yAxis.forEach(y => {
-                const [yTable, yColumn] = y.split('.');
-                combinedData[xValue][yColumn] = 0;
-              });
-            }
-            yAxis.forEach(y => {
-              const [yTable, yColumn] = y.split('.');
-              const value = parseFloat(selectedData[index][yColumn]);
-              if (!isNaN(value)) {
-                combinedData[xValue][yColumn] += value;
-              }
-            });
-          });
-
-          labels = Object.keys(combinedData);
-
-          // Process Y-axis data
-          datasets = yAxis.map((y, index) => {
-            const [yTable, yColumn] = y.split('.');
-            const yData = labels.map(label => combinedData[label][yColumn]);
-
-            if (yData.every(val => val === null)) {
-              setError(`No valid numeric data available for ${yColumn}. Please check your selection.`);
-              return null;
-            }
-
-            const uniqueColors = getUniqueColors(yAxis.length);
-
-            return {
-              label: yColumn,
-              data: yData,
-              backgroundColor: element.type === 'barLine' && index === 0 ? uniqueColors[index] : (element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie' ? getUniqueColors(yData.length) : 'transparent'),
-              borderColor: element.type === 'pie' || element.type === 'halfPie' || element.type === 'hollowPie' ? 'rgba(255, 255, 255, 1)' : uniqueColors[index],
-              borderWidth: 2,
-              fill: element.type === 'area' || element.type === 'stackedBar',
-              tension: 0.4,
-              ...(element.type === 'barLine' && index > 0 && { type: 'line' }),
-            };
-          }).filter(dataset => dataset !== null);
-        }
-
-        if (datasets.length === 0) {
-          setError("No valid data available for the selected columns. Please check your selection.");
-          return;
-        }
-
-        const newChartData = { labels, datasets };
-        setChartData(newChartData);
-        onUpdate(element.id, { chartData: newChartData, axisInfo });
+        processChartData(selectedData, newAxisInfo);
       }
     } else {
       setError("No data returned from the query. Please check your selection and try again.");
     }
+  };
+
+  const processChartData = (selectedData, { xAxis, yAxis }) => {
+    const xAxisArray = Array.isArray(xAxis) ? xAxis : [xAxis];
+    const isAggregatedData = selectedData[0] && selectedData[0].hasOwnProperty('period');
+  
+    let labels, datasets;
+  
+    try {
+      if (isAggregatedData) {
+        [labels, datasets] = processAggregatedData(selectedData, yAxis);
+      } else {
+        [labels, datasets] = processRegularData(selectedData, xAxisArray, yAxis);
+      }
+  
+      if (!datasets || datasets.length === 0) {
+        setError("No valid data available for the selected columns. Please ensure Y-axis columns contain numeric data.");
+        return;
+      }
+  
+      const newChartData = { labels, datasets };
+      setChartData(newChartData);
+      onUpdate(element.id, { chartData: newChartData, axisInfo: { xAxis, yAxis } });
+    } catch (error) {
+      console.error('Error processing chart data:', error);
+      setError("Error processing data. Please check if the selected columns are compatible with the chart type.");
+      return;
+    }
+  };
+
+  const processAggregatedData = (selectedData, yAxis) => {
+    const labels = selectedData.map(item => item.period);
+    const metrics = yAxis.map(y => y.split('.')[1]);
+    
+    const datasets = metrics.flatMap((metric, metricIndex) => {
+      if (selectedData[0][metric] && typeof selectedData[0][metric] === 'string') {
+        try {
+          const parsedData = selectedData.map(item => JSON.parse(item[metric]));
+          const highestData = parsedData.map(item => parseFloat(item.highest) || 0);
+          const lowestData = parsedData.map(item => parseFloat(item.lowest) || 0);
+          const averageData = parsedData.map(item => parseFloat(item.average) || 0);
+
+          const colors = getColors(3);
+          const baseIndex = metricIndex * 3;
+
+          return [
+            {
+              label: `${metric} (Highest)`,
+              data: highestData,
+              backgroundColor: colors[baseIndex] + '80',
+              borderColor: colors[baseIndex],
+              borderWidth: 2,
+              fill: element.type === 'area',
+            },
+            {
+              label: `${metric} (Lowest)`,
+              data: lowestData,
+              backgroundColor: colors[baseIndex + 1] + '80',
+              borderColor: colors[baseIndex + 1],
+              borderWidth: 2,
+              fill: element.type === 'area',
+            },
+            {
+              label: `${metric} (Average)`,
+              data: averageData,
+              backgroundColor: colors[baseIndex + 2] + '80',
+              borderColor: colors[baseIndex + 2],
+              borderWidth: 2,
+              fill: element.type === 'area',
+            }
+          ];
+        } catch (error) {
+          console.error(`Error parsing data for ${metric}:`, error);
+          return [];
+        }
+      } else {
+        const data = selectedData.map(item => parseFloat(item[metric]) || 0);
+        const color = colorPalette[metricIndex % colorPalette.length];
+        return [{
+          label: metric,
+          data: data,
+          backgroundColor: color + '80',
+          borderColor: color,
+          borderWidth: 2,
+          fill: element.type === 'area',
+        }];
+      }
+    });
+
+    return [labels, datasets];
+  };
+
+  const processRegularData = (selectedData, xAxisArray, yAxis) => {
+    const labels = [...new Set(xAxisArray.flatMap(x => {
+      const [xTable, xColumn] = x.split('.');
+      return selectedData.map(row => row[xColumn]);
+    }))];
+
+    const datasets = yAxis.map((y, index) => {
+      const [yTable, yColumn] = y.split('.');
+      const yData = labels.map(label => {
+        const matchingRows = selectedData.filter(row => 
+          xAxisArray.some(x => {
+            const [xTable, xColumn] = x.split('.');
+            return row[xColumn] === label;
+          })
+        );
+        return matchingRows.reduce((sum, row) => sum + (parseFloat(row[yColumn]) || 0), 0) / matchingRows.length;
+      });
+
+      if (yData.every(val => val === null)) {
+        setError(`No valid numeric data available for ${yColumn}. Please check your selection.`);
+        return null;
+      }
+
+      const color = colorPalette[index % colorPalette.length];
+
+      return {
+        label: yColumn,
+        data: yData,
+        backgroundColor: getChartBackgroundColor(element.type, index, yData.length, color),
+        borderColor: getBorderColor(element.type, color),
+        borderWidth: 2,
+        fill: element.type === 'area' || element.type === 'stackedBar',
+        tension: 0.4,
+        ...(element.type === 'barLine' && index > 0 && { type: 'line' }),
+      };
+    }).filter(dataset => dataset !== null);
+
+    return [labels, datasets];
+  };
+
+  const getChartBackgroundColor = (chartType, index, dataLength, color) => {
+    switch (chartType) {
+      case 'bar':
+      case 'stackedBar':
+      case 'stripedBar':
+        return color;
+      case 'pie':
+      case 'halfPie':
+      case 'hollowPie':
+        return getColors(dataLength);
+      case 'area':
+        return `${color}80`; // Add 50% opacity
+      case 'barLine':
+        return index === 0 ? color : 'transparent';
+      default:
+        return 'transparent';
+    }
+  };
+
+  const getBorderColor = (chartType, color) => {
+    return ['pie', 'halfPie', 'hollowPie'].includes(chartType) ? 'rgba(255, 255, 255, 1)' : color;
   };
 
   const renderChart = () => {
@@ -273,9 +329,15 @@ function ElementRenderer({ element, onUpdate, customData }) {
       },
     };
 
-    // Remove axes for pie charts
     if (['pie', 'halfPie', 'hollowPie'].includes(element.type)) {
       delete chartSpecificOptions.scales;
+    }
+
+    if (element.type === 'area') {
+      chartSpecificOptions.elements = {
+        ...chartSpecificOptions.elements,
+        line: { fill: true }
+      };
     }
 
     const pieChartData = {
@@ -314,12 +376,32 @@ function ElementRenderer({ element, onUpdate, customData }) {
     );
   };
 
+  const renderChartOrDropZone = () => {
+    if (chartData) {
+      return renderChart();
+    } else if (error) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-red-100 p-4 rounded-lg">
+          <p className="text-red-600">{error}</p>
+        </div>
+      );
+    } else {
+      return (
+        <ChartDropZone
+          onDataSelect={handleDataSelect}
+          chartType={element.type}
+          axisInfo={axisInfo}
+        />
+      );
+    }
+  };
+
   switch (element.type) {
     case 'table':
       return data ? (
         <TableElement data={data} />
       ) : (
-        <DataSelector onDataSelect={handleDataSelect} />
+        <ChartDropZone onDataSelect={handleDataSelect} chartType={element.type} />
       );
     case 'bar':
     case 'stackedBar':
@@ -331,15 +413,7 @@ function ElementRenderer({ element, onUpdate, customData }) {
     case 'halfPie':
     case 'hollowPie':
     case 'barLine':
-      return chartData ? renderChart() : (
-        error ? (
-          <div className="w-full h-full flex items-center justify-center bg-red-100 p-4 rounded-lg">
-            <p className="text-red-600">{error}</p>
-          </div>
-        ) : (
-          <DataSelector onDataSelect={handleDataSelect} />
-        )
-      );
+      return renderChartOrDropZone();
     case 'text':
       return (
         <div
@@ -402,4 +476,3 @@ function ElementRenderer({ element, onUpdate, customData }) {
 
 export default ElementRenderer;
 
-  

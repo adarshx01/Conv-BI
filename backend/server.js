@@ -112,9 +112,9 @@ app.post('/api/query', async (req, res) => {
     }
 
     // Add ORDER BY clause for date column if it exists
-    if (dateColumn) {
-      query += ` ORDER BY "date"`;
-    }
+    // if (dateColumn) {
+    //   query += ` ORDER BY "date"`;
+    // }
 
     console.log('Executing query:', query);
     const result = await pools[database].query(query);

@@ -126,4 +126,3 @@ function Canvas({ elements, setElements, canvasSize, pageId, isActive }) {
 }
 
 export default Canvas;
-

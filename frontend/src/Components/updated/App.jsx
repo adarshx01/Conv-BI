@@ -26,18 +26,19 @@ function App() {
       prevPages.map(page =>
         page.id === currentPageId
           ? {
-              ...page,
-              elements: [
-                ...page.elements,
-                {
-                  ...element,
-                  id: Date.now(),
-                  position: { x: 0, y: 0 },
-                  size: { width: 400, height: 300 }
-                }
-              ]
-            }
-          : page
+            ...page,
+            elements: [
+              ...page.elements,
+              {
+                ...element,
+                id: Date.now(),
+                position: { x: 0, y: 0 },
+                size: { width: 400, height: 300 },
+                axisInfo: { xAxis: [], yAxis: [] } // Initialize with empty arrays
+              }
+            ]
+          }
+        : page
       )
     );
   };
