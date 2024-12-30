@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
-import { BarChart, LineChart, PieChart, AreaChart, Layers, BarChartHorizontal, PieChartIcon, Donut, TrendingUp, Image, Type, Square, Circle, Triangle, Smile, Table, Star, Share, ShareIcon, Save, Upload } from 'lucide-react';
+import { BarChart, LineChart, PieChart, AreaChart, Layers, BarChartHorizontal, PieChartIcon, Donut, TrendingUp, Image, Type, Square, Circle, Triangle, Smile, Table, Star, Share, ShareIcon, Save, Download } from 'lucide-react';
 import PageManager from './PageManager';
 import axios from 'axios';
 import DraggableColumn from './DraggableColumn';
@@ -199,7 +199,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
       case 1:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Step 1: Select Database and Table</h2>
+            <h2 className="text-xl font-semibold">1: Select DB and Table</h2>
             <div>
               <label className="block text-sm font-medium text-gray-700">Select Database:</label>
               <select
@@ -243,7 +243,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
       case 2:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Step 2: Join Operation and Date Range</h2>
+            <h2 className="text-xl font-semibold">2: Joins and Date Period</h2>
             <div>
               <label className="block text-sm font-medium text-gray-700">Join Type:</label>
               <select
@@ -366,11 +366,11 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
       case 3:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Step 3: Draggable Columns</h2>
+            <h2 className="text-xl font-semibold">3: Draggable Columns</h2>
             {tableData && (
               <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-2">Draggable Columns</h3>
-                <div className="grid grid-cols-2 gap-2">
+                {/* <h3 className="text-lg font-semibold mb-2">Draggable Columns</h3> */}
+                <div className="grid grid-cols-2 gap-1">
                   {Object.entries(columns).flatMap(([table, cols]) =>
                     cols.map(column => (
                       <DraggableColumn
@@ -401,31 +401,28 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
 
   return (
     <div className="sidebar">
-      <div className='my-3 mx-auto flex flex-row'>
+      
+      <div className='my-3 mx-auto flex flex-row border-2 rounded-xl p-1 py-2 bg-purple-50'>
         <button 
           onClick={onSave} 
-          className='flex items-center border-2 rounded-3xl px-3 mx-1 h-10 space-x-2 hover:bg-green-300 focus:bg-violet-400'>
-          <Save className='w-5 h-5' /> 
-          <span>Save Report</span>
+          className='flex items-center border-2 rounded-xl text-sm px-2 mx-0.5 h-8 space-x-1 bg-lime-50 hover:bg-green-300 focus:bg-violet-400'>
+          <Save className='w-4 h-4' /> 
+          <span>Save</span>
         </button>
 
         <button 
           onClick={onLoad} 
-          className='flex items-center border-2 rounded-3xl px-3 mx-1 h-10 space-x-2 hover:bg-green-300 focus:bg-violet-400'>
-          <Upload className='w-5 h-5' /> 
-          <span>Load Report</span>
+          className='flex items-center border-2 rounded-xl text-sm px-2 mx-0.5 h-8 space-x-1 bg-lime-50 hover:bg-green-300 focus:bg-violet-400'>
+          <Download className='w-4 h-4' /> 
+          <span>Load</span>
         </button>
 
         <button 
           onClick={onExport} 
-          className='flex items-center border-2 rounded-3xl px-3 mx-1 h-10 space-x-2 hover:bg-green-300 focus:bg-violet-400'>
-          <ShareIcon className='w-5 h-5' /> 
+          className='flex items-center border-2 rounded-xl text-sm px-2 mx-0.5 h-8 space-x-1 bg-lime-50 hover:bg-green-300 focus:bg-violet-400'>
+          <ShareIcon className='w-4 h-4' /> 
           <span>Export</span>
         </button>
-      </div>
-      <div className="data-selector p-4">
-        <h3 className="text-lg font-semibold mb-4">Data Source</h3>
-        {renderStep()}
       </div>
       <div className="sidebar-search">
         <input
@@ -440,7 +437,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
         {Object.keys(elementCategories).map(category => (
           <button
             key={category}
-            className={`category-button ${activeCategory === category ? 'active bg-orange-200' : 'bg-violet-400'} px-2 rounded-3xl   border-2 mx-0.5`}
+            className={`category-button ${activeCategory === category ? 'active bg-orange-200' : 'bg-violet-300'} px-2 rounded-3xl   border-2 mx-0.5`}
             onClick={() => setActiveCategory(category)}
           >
             {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -456,7 +453,11 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
           />
         ))}
       </div>
-      <div className='p-2 border-2 mx-4  rounded-xl mt-24'>
+      <div className="data-selector p-4 mx-2 mt-2">
+        {/* <h3 className="text-lg font-semibold mb-4">Data Source</h3> */}
+        {renderStep()}
+      </div>
+      <div className='p-2 border-2 mx-4  rounded-xl mt-4'>
         <p className='font-semibold text-[1rem] text-center'>Page Settings</p>
         <hr className='mb-4'></hr>
         <PageManager
@@ -473,4 +474,3 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
 }
 
 export default Sidebar;
-

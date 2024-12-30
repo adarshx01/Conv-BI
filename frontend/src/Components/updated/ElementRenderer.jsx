@@ -7,8 +7,7 @@ import { TableElement } from './TableElement';
 ChartJS.register(
   CategoryScale,
   LinearScale,
-  PointElement,
-  LineElement,
+  PointElement,LineElement,
   BarElement,
   ArcElement,
   Title,
@@ -23,6 +22,7 @@ const colorPalette = [
   '#FFD1E3', '#FA7070', '#AD88C6', '#15F5BA', '#7ED7C1',
   '#89B9AD', '#C7DCA7', '#FFC436', '#FF8989', '#9DB2BF'
 ];
+
 const getUniqueColors = (count) => {
   const hueStep = 360 / count;
   return Array.from({ length: count }, (_, i) => {
@@ -30,6 +30,7 @@ const getUniqueColors = (count) => {
     return `hsla(${hue}, 100%, 50%, 0.8)`;
   });
 };
+
 const getColors = (count) => {
   const colors = [];
   for (let i = 0; i < count; i++) {
@@ -111,7 +112,6 @@ const BarLineChart = ({ data, options }) => {
   );
 };
 
-
 function ElementRenderer({ element, onUpdate }) {
   const [data, setData] = useState(element.data || null);
   const [chartData, setChartData] = useState(element.chartData || null);
@@ -133,8 +133,6 @@ function ElementRenderer({ element, onUpdate }) {
     if (selectedData && selectedData.length > 0) {
       if (element.type === 'table') {
         setData(selectedData);
-
-        console.log('selected data', selectedData);
         onUpdate(element.id, { data: selectedData });
       } else {
         processChartData(selectedData, newAxisInfo);
@@ -147,21 +145,21 @@ function ElementRenderer({ element, onUpdate }) {
   const processChartData = (selectedData, { xAxis, yAxis }) => {
     const xAxisArray = Array.isArray(xAxis) ? xAxis : [xAxis];
     const isAggregatedData = selectedData[0] && selectedData[0].hasOwnProperty('period');
-  
+
     let labels, datasets;
-  
+
     try {
       if (isAggregatedData) {
         [labels, datasets] = processAggregatedData(selectedData, yAxis);
       } else {
         [labels, datasets] = processRegularData(selectedData, xAxisArray, yAxis);
       }
-  
+
       if (!datasets || datasets.length === 0) {
         setError("No valid data available for the selected columns. Please ensure Y-axis columns contain numeric data.");
         return;
       }
-  
+
       const newChartData = { labels, datasets };
       setChartData(newChartData);
       onUpdate(element.id, { chartData: newChartData, axisInfo: { xAxis, yAxis } });
@@ -174,7 +172,7 @@ function ElementRenderer({ element, onUpdate }) {
 
   const processAggregatedData = (selectedData, yAxis) => {
     const labels = selectedData.map(item => item.period);
-    const metrics = yAxis.map(y => y.split('.')[1]);
+    const metrics = yAxis.map(y => y.path.split('.')[1]);
     
     const datasets = metrics.flatMap((metric, metricIndex) => {
       if (selectedData[0][metric] && typeof selectedData[0][metric] === 'string') {
@@ -236,31 +234,92 @@ function ElementRenderer({ element, onUpdate }) {
 
   const processRegularData = (selectedData, xAxisArray, yAxis) => {
     const labels = [...new Set(xAxisArray.flatMap(x => {
-      const [xTable, xColumn] = x.split('.');
+      const [xTable, xColumn] = x.path.split('.');
       return selectedData.map(row => row[xColumn]);
     }))];
 
     const datasets = yAxis.map((y, index) => {
-      const [yTable, yColumn] = y.split('.');
-      const yData = labels.map(label => {
-        const matchingRows = selectedData.filter(row => 
-          xAxisArray.some(x => {
-            const [xTable, xColumn] = x.split('.');
-            return row[xColumn] === label;
-          })
-        );
-        return matchingRows.reduce((sum, row) => sum + (parseFloat(row[yColumn]) || 0), 0) / matchingRows.length;
-      });
+      let yData;
+
+      if (['ADD', 'SUBTRACT', 'DIVIDE'].includes(y.aggregationFunction)) {
+        const [col1, col2] = y.path.match(/$$(.*?)$$/)[1].split(', ');
+        const [table1, column1] = col1.split('.');
+        const [table2, column2] = col2.split('.');
+
+        yData = labels.map(label => {
+          const matchingRows = selectedData.filter(row => 
+            xAxisArray.some(x => {
+              const [xTable, xColumn] = x.path.split('.');
+              return row[xColumn] === label;
+            })
+          );
+
+          const value1 = matchingRows.reduce((sum, row) => sum + (parseFloat(row[column1]) || 0), 0);
+          const value2 = matchingRows.reduce((sum, row) => sum + (parseFloat(row[column2]) || 0), 0);
+
+          switch (y.aggregationFunction) {
+            case 'ADD':
+              return value1 + value2;
+            case 'SUBTRACT':
+              return value1 - value2;
+            case 'DIVIDE':
+              return value2 !== 0 ? value1 / value2 : 0;
+            default:
+              return 0;
+          }
+        });
+      } else if (y.aggregationFunction === 'COUNT_BY') {
+        const [countColumn, byColumn] = y.path.match(/$$(.*?)$$/)[1].split(', ');
+        const [countTable, countColumnName] = countColumn.split('.');
+        const [byTable, byColumnName] = byColumn.split('.');
+
+        yData = labels.map(label => {
+          const matchingRows = selectedData.filter(row => 
+            xAxisArray.some(x => {
+              const [xTable, xColumn] = x.path.split('.');
+              return row[xColumn] === label;
+            })
+          );
+
+          const uniqueValues = new Set(matchingRows.map(row => row[byColumnName]));
+          return uniqueValues.size;
+        });
+      } else {
+        const [yTable, yColumn] = y.path.split('.');
+        yData = labels.map(label => {
+          const matchingRows = selectedData.filter(row => 
+            xAxisArray.some(x => {
+              const [xTable, xColumn] = x.path.split('.');
+              return row[xColumn] === label;
+            })
+          );
+          
+          switch (y.aggregationFunction) {
+            case 'SUM':
+              return matchingRows.reduce((sum, row) => sum + (parseFloat(row[yColumn]) || 0), 0);
+            case 'AVG':
+              return matchingRows.reduce((sum, row) => sum + (parseFloat(row[yColumn]) || 0), 0) / matchingRows.length;
+            case 'COUNT':
+              return matchingRows.length;
+            case 'MIN':
+              return Math.min(...matchingRows.map(row => parseFloat(row[yColumn]) || 0));
+            case 'MAX':
+              return Math.max(...matchingRows.map(row => parseFloat(row[yColumn]) || 0));
+            default:
+              return matchingRows.reduce((sum, row) => sum + (parseFloat(row[yColumn]) || 0), 0) / matchingRows.length;
+          }
+        });
+      }
 
       if (yData.every(val => val === null)) {
-        setError(`No valid numeric data available for ${yColumn}. Please check your selection.`);
+        setError(`No valid numeric data available for ${y.path}. Please check your selection.`);
         return null;
       }
 
       const color = colorPalette[index % colorPalette.length];
 
       return {
-        label: yColumn,
+        label: y.path,
         data: yData,
         backgroundColor: getChartBackgroundColor(element.type, index, yData.length, color),
         borderColor: getBorderColor(element.type, color),
@@ -475,4 +534,3 @@ function ElementRenderer({ element, onUpdate }) {
 }
 
 export default ElementRenderer;
-

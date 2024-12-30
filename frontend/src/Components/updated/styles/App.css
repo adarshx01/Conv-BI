@@ -73,7 +73,8 @@
   padding: 1rem;
   margin: 0.9rem 0.5rem 0 0.5rem;
   display: grid;
-  height: 36vh; 
+  /* height: 36vh;  */
+  min-height: 10rem;
   border: 1px solid #e0e0e0;
   border-radius: 0.8rem;
   grid-template-columns: repeat(2, 1fr);
@@ -232,7 +233,7 @@
   flex-direction: column;
   gap: 10px;
   padding: 10px;
-  background-color: #f5f5f5;
+  background-color: #f9f9f9;
   border-radius: 4px;
 }
 
@@ -303,4 +304,3 @@
 .element-item[data-type="table"] .lucide-table {
   margin-bottom: 0.5rem;
 }
-
