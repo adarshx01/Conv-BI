@@ -19,7 +19,7 @@ import UpdatedCanva from "./Components/updated/App";
 const { Content } = Layout;
 
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // State for login status
+  const [isAuthenticated, setIsAuthenticated] = useState(); // State for login status
 
   return (
     <Router>
@@ -27,7 +27,7 @@ const App = () => {
         {/* Login Route */}
         <Route
           path="/login"
-          element={<Login onLogin={() => setIsAuthenticated()} />}
+          element={<Login onLogin={() => setIsAuthenticated(true)} />}
         />
 
         {/* Protected Routes */}
