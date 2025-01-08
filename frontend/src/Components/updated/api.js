@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5001/api'; // Make sure this matches your server port
+const API_BASE_URL = 'https://newbi-tsn1.onrender.com/api'; // Make sure this matches your server port
 
 export const saveReport = async (name, data) => {
   try {

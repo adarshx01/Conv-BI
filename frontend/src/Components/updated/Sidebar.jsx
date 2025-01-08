@@ -117,7 +117,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
 
   const fetchDatabases = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/databases');
+      const response = await axios.get('https://newbi-tsn1.onrender.com/api/databases');
       setDatabases(response.data);
     } catch (error) {
       console.error('Error fetching databases:', error);
@@ -126,7 +126,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
 
   const fetchTables = async (database) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/tables/${database}`);
+      const response = await axios.get(`https://newbi-tsn1.onrender.com/api/tables/${database}`);
       setTables(response.data);
     } catch (error) {
       console.error('Error fetching tables:', error);
@@ -135,7 +135,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
   
   const fetchColumns = async (database, table) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/columns/${database}/${table}`);
+      const response = await axios.get(`https://newbi-tsn1.onrender.com/api/columns/${database}/${table}`);
       setColumns(prev => ({ ...prev, [table]: response.data }));
     } catch (error) {
       console.error('Error fetching columns:', error);
@@ -162,7 +162,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
         dataType
       };
 
-      const response = await axios.post('http://localhost:5000/api/query', requestData);  
+      const response = await axios.post('https://newbi-tsn1.onrender.com/api/query', requestData);  
       if (response.data && Array.isArray(response.data)) {
         const processedData = processData(response.data);
         setTableData(processedData);
