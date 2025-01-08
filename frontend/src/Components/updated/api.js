@@ -8,7 +8,7 @@ export const saveReport = async (name, data) => {
     return response.data;
   } catch (error) {
     console.error('Error saving report to server:', error);
-    throw error; // Propagate the error to be handled by the caller
+    throw error; 
   }
 };
 
@@ -18,7 +18,7 @@ export const loadReports = async () => {
     return response.data;
   } catch (error) {
     console.error('Error loading reports from server:', error);
-    throw error; // Propagate the error to be handled by the caller
+    throw error; 
   }
 };
 

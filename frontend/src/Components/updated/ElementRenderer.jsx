@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef } from 'react';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import ChartDropZone from './ChartDropZone';
@@ -7,7 +7,8 @@ import { TableElement } from './TableElement';
 ChartJS.register(
   CategoryScale,
   LinearScale,
-  PointElement,LineElement,
+  PointElement,
+  LineElement,
   BarElement,
   ArcElement,
   Title,
@@ -15,6 +16,7 @@ ChartJS.register(
   Legend,
   Filler
 );
+
 
 const colorPalette = [
   '#CDC1FF', '#FCC737', '#A8CD89', '#9694FF', '#A1EEBD', 
@@ -64,6 +66,23 @@ const chartOptions = {
       padding: 12,
       boxPadding: 6,
       usePointStyle: true,
+      callbacks: {
+        label: function(context) {
+          let label = context.label || '';
+          if (label) {
+            label += ': ';
+          }
+          if (context.parsed !== null && context.parsed !== undefined) {
+            const value = context.parsed.y !== undefined ? context.parsed.y : context.parsed;
+            if (context.dataset.isPercentage) {
+              label += value.toFixed(2) + '%';
+            } else {
+              label += (typeof value.toLocaleString === 'function') ? value.toLocaleString() : value;
+            }
+          }
+          return label;
+        }
+      },
     },
   },
   scales: {
@@ -88,6 +107,12 @@ const chartOptions = {
         font: {
           size: 11,
         },
+        callback: function(value, index, values) {
+          if (this.chart.data.datasets.some(dataset => dataset.isPercentage)) {
+            return value + '%';
+          }
+          return value.toLocaleString();
+        },
       },
     },
   },
@@ -97,9 +122,11 @@ const chartOptions = {
   },
 };
 
-const BarLineChart = ({ data, options }) => {
+
+const BarLineChart = forwardRef(({ data, options }, ref) => {
   return (
     <Bar
+      ref={ref}
       data={{
         ...data,
         datasets: data.datasets.map((dataset, index) => ({
@@ -110,7 +137,7 @@ const BarLineChart = ({ data, options }) => {
       options={options}
     />
   );
-};
+});
 
 function ElementRenderer({ element, onUpdate }) {
   const [data, setData] = useState(element.data || null);
@@ -128,6 +155,8 @@ function ElementRenderer({ element, onUpdate }) {
   }, [chartData]);
 
   const handleDataSelect = (selectedData, newAxisInfo) => {
+    console.log("Selected Data:", selectedData); // Log selected data
+    console.log("Axis Info:", newAxisInfo); // Log axis information
     setAxisInfo(newAxisInfo);
     setError(null);
     if (selectedData && selectedData.length > 0) {
@@ -142,7 +171,13 @@ function ElementRenderer({ element, onUpdate }) {
     }
   };
 
-  const processChartData = (selectedData, { xAxis, yAxis }) => {
+  const processChartData = (selectedData, { xAxis, yAxis, orderBy, groupByColumns }) => {
+
+    console.log("Processing Chart Data: ", selectedData);
+    console.log("xAxis Info: ", xAxis); // Log x-axis info
+    console.log("yAxis Info: ", yAxis); // Log y-axis info
+  
+
     const xAxisArray = Array.isArray(xAxis) ? xAxis : [xAxis];
     const isAggregatedData = selectedData[0] && selectedData[0].hasOwnProperty('period');
 
@@ -152,20 +187,37 @@ function ElementRenderer({ element, onUpdate }) {
       if (isAggregatedData) {
         [labels, datasets] = processAggregatedData(selectedData, yAxis);
       } else {
-        [labels, datasets] = processRegularData(selectedData, xAxisArray, yAxis);
+        [labels, datasets] = processRegularData(selectedData, xAxisArray, yAxis, groupByColumns);
       }
 
       if (!datasets || datasets.length === 0) {
-        setError("No valid data available for the selected columns. Please ensure Y-axis columns contain numeric data.");
-        return;
+        throw new Error("No valid data available for the selected columns. Please ensure Y-axis columns contain numeric data.");
+      }
+
+      // Apply ORDER BY
+      if (orderBy && orderBy.column) {
+        const orderIndex = datasets.findIndex(dataset => dataset.label === orderBy.column);
+        if (orderIndex !== -1) {
+          const sortedIndices = labels.map((_, i) => i).sort((a, b) => {
+            const valueA = datasets[orderIndex].data[a];
+            const valueB = datasets[orderIndex].data[b];
+            return orderBy.direction === 'asc' ? valueA - valueB : valueB - valueA;
+          });
+
+          labels = sortedIndices.map(i => labels[i]);
+          datasets = datasets.map(dataset => ({
+            ...dataset,
+            data: sortedIndices.map(i => dataset.data[i])
+          }));
+        }
       }
 
       const newChartData = { labels, datasets };
       setChartData(newChartData);
-      onUpdate(element.id, { chartData: newChartData, axisInfo: { xAxis, yAxis } });
+      onUpdate(element.id, { chartData: newChartData, axisInfo: { xAxis, yAxis, orderBy, groupByColumns } });
     } catch (error) {
       console.error('Error processing chart data:', error);
-      setError("Error processing data. Please check if the selected columns are compatible with the chart type.");
+      setError(`Error processing data: ${error.message}. Please check if the selected columns are compatible with the chart type.`);
       return;
     }
   };
@@ -232,24 +284,45 @@ function ElementRenderer({ element, onUpdate }) {
     return [labels, datasets];
   };
 
-  const processRegularData = (selectedData, xAxisArray, yAxis) => {
+  const processRegularData = (selectedData, xAxisArray, yAxis, groupByColumns) => {
+    let groupedData = selectedData;
+    
+    if (groupByColumns && groupByColumns.length > 0) {
+      const groupByPaths = groupByColumns.map(col => col.path);
+      groupedData = Object.values(selectedData.reduce((acc, row) => {
+        const key = groupByPaths.map(path => row[path.split('.')[1]]).join('|');
+        if (!acc[key]) {
+          acc[key] = { ...row };
+        } else {
+          yAxis.forEach(y => {
+            if (y.aggregationFunction) {
+              const [, column] = y.path.split('.');
+              acc[key][column] = (acc[key][column] || 0) + (parseFloat(row[column]) || 0);
+            }
+          });
+        }
+        return acc;
+      }, {}));
+    }
+
     const labels = [...new Set(xAxisArray.flatMap(x => {
-      const [xTable, xColumn] = x.path.split('.');
-      return selectedData.map(row => row[xColumn]);
+      const [, xColumn] = x.path.split('.');
+      return groupedData.map(row => row[xColumn]);
     }))];
 
     const datasets = yAxis.map((y, index) => {
       let yData;
 
-      if (['ADD', 'SUBTRACT', 'DIVIDE'].includes(y.aggregationFunction)) {
-        const [col1, col2] = y.path.match(/$$(.*?)$$/)[1].split(', ');
-        const [table1, column1] = col1.split('.');
-        const [table2, column2] = col2.split('.');
+      if (['ADD', 'SUBTRACT', 'MULTIPLY', 'DIVIDE', 'PERCENTAGE'].includes(y.aggregationFunction)) {
+        const [func, args] = y.path.split('(');
+        const [col1, col2] = args.slice(0, -1).split(',').map(s => s.trim());
+        const [, column1] = col1.split('.');
+        const [, column2] = col2.split('.');
 
         yData = labels.map(label => {
-          const matchingRows = selectedData.filter(row => 
+          const matchingRows = groupedData.filter(row => 
             xAxisArray.some(x => {
-              const [xTable, xColumn] = x.path.split('.');
+              const [, xColumn] = x.path.split('.');
               return row[xColumn] === label;
             })
           );
@@ -262,21 +335,25 @@ function ElementRenderer({ element, onUpdate }) {
               return value1 + value2;
             case 'SUBTRACT':
               return value1 - value2;
+            case 'MULTIPLY':
+              return value1 * value2;
             case 'DIVIDE':
               return value2 !== 0 ? value1 / value2 : 0;
+            case 'PERCENTAGE':
+              return value2 !== 0 ? ((value1 / value2) * 100) : 0;
             default:
               return 0;
           }
         });
       } else if (y.aggregationFunction === 'COUNT_BY') {
-        const [countColumn, byColumn] = y.path.match(/$$(.*?)$$/)[1].split(', ');
-        const [countTable, countColumnName] = countColumn.split('.');
-        const [byTable, byColumnName] = byColumn.split('.');
+        const [countColumn, byColumn] = y.path.match(/$$(.*?)$$/)[1].split(',').map(s => s.trim());
+        const [, countColumnName] = countColumn.split('.');
+        const [, byColumnName] = byColumn.split('.');
 
         yData = labels.map(label => {
-          const matchingRows = selectedData.filter(row => 
+          const matchingRows = groupedData.filter(row => 
             xAxisArray.some(x => {
-              const [xTable, xColumn] = x.path.split('.');
+              const [, xColumn] = x.path.split('.');
               return row[xColumn] === label;
             })
           );
@@ -285,11 +362,11 @@ function ElementRenderer({ element, onUpdate }) {
           return uniqueValues.size;
         });
       } else {
-        const [yTable, yColumn] = y.path.split('.');
+        const [, yColumn] = y.path.split('.');
         yData = labels.map(label => {
-          const matchingRows = selectedData.filter(row => 
+          const matchingRows = groupedData.filter(row => 
             xAxisArray.some(x => {
-              const [xTable, xColumn] = x.path.split('.');
+              const [, xColumn] = x.path.split('.');
               return row[xColumn] === label;
             })
           );
@@ -298,25 +375,31 @@ function ElementRenderer({ element, onUpdate }) {
             case 'SUM':
               return matchingRows.reduce((sum, row) => sum + (parseFloat(row[yColumn]) || 0), 0);
             case 'AVG':
-              return matchingRows.reduce((sum, row) => sum + (parseFloat(row[yColumn]) || 0), 0) / matchingRows.length;
+              return matchingRows.length > 0 ? matchingRows.reduce((sum, row) => sum + (parseFloat(row[yColumn]) || 0), 0) / matchingRows.length : 0;
             case 'COUNT':
               return matchingRows.length;
             case 'MIN':
-              return Math.min(...matchingRows.map(row => parseFloat(row[yColumn]) || 0));
+              return matchingRows.length > 0 ? Math.min(...matchingRows.map(row => parseFloat(row[yColumn]) || 0)) : 0;
             case 'MAX':
-              return Math.max(...matchingRows.map(row => parseFloat(row[yColumn]) || 0));
+              return matchingRows.length > 0 ? Math.max(...matchingRows.map(row => parseFloat(row[yColumn]) || 0)) : 0;
             default:
-              return matchingRows.reduce((sum, row) => sum + (parseFloat(row[yColumn]) || 0), 0) / matchingRows.length;
+              return matchingRows.length > 0 ? matchingRows.reduce((sum, row) => sum + (parseFloat(row[yColumn]) || 0), 0) / matchingRows.length : 0;
           }
         });
       }
 
-      if (yData.every(val => val === null)) {
-        setError(`No valid numeric data available for ${y.path}. Please check your selection.`);
+      if (y.aggregationFunction === 'PERCENTAGE') {
+        yData = yData.map(value => Math.min(Math.max(value, 0), 100));
+      }
+
+      if (yData.every(val => val === null || isNaN(val))) {
+        console.error(`No valid numeric data available for ${y.path}. Please check your selection.`);
         return null;
       }
 
       const color = colorPalette[index % colorPalette.length];
+
+      const isPercentage = y.aggregationFunction === 'PERCENTAGE';
 
       return {
         label: y.path,
@@ -327,12 +410,12 @@ function ElementRenderer({ element, onUpdate }) {
         fill: element.type === 'area' || element.type === 'stackedBar',
         tension: 0.4,
         ...(element.type === 'barLine' && index > 0 && { type: 'line' }),
+        isPercentage: isPercentage,
       };
     }).filter(dataset => dataset !== null);
 
     return [labels, datasets];
   };
-
   const getChartBackgroundColor = (chartType, index, dataLength, color) => {
     switch (chartType) {
       case 'bar':
@@ -406,6 +489,7 @@ function ElementRenderer({ element, onUpdate }) {
         backgroundColor: getUniqueColors(chartData.datasets[0].data.length),
         borderColor: 'rgba(255, 255, 255, 1)',
         borderWidth: 2,
+        isPercentage: chartData.datasets[0].isPercentage,
       }],
     };
 
@@ -417,6 +501,17 @@ function ElementRenderer({ element, onUpdate }) {
           ...chartSpecificOptions.plugins.legend,
           position: 'bottom',
         },
+        tooltip: {
+          ...chartSpecificOptions.plugins.tooltip,
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.raw;
+              const percentage = ((value / context.dataset.data.reduce((a, b) => a + b, 0)) * 100).toFixed(2);
+              return `${label}: ${value.toLocaleString()} (${percentage}%)`;
+            }
+          }
+        }
       },
       ...(element.type === 'halfPie' && {
         rotation: -90,
@@ -534,3 +629,4 @@ function ElementRenderer({ element, onUpdate }) {
 }
 
 export default ElementRenderer;
+

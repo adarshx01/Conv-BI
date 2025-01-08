@@ -91,8 +91,31 @@ function App() {
 
   const onReportLoaded = (loadedReport) => {
     if (loadedReport && loadedReport.pages && loadedReport.currentPageId) {
-      setPages(loadedReport.pages);
-      setCurrentPageId(loadedReport.currentPageId);
+      setPages(prevPages => {
+        const mergedPages = [...prevPages];
+        loadedReport.pages.forEach(loadedPage => {
+          const existingPageIndex = mergedPages.findIndex(p => p.id === currentPageId);
+          if (existingPageIndex !== -1) {
+            // Merge elements of the current page with loaded page
+            mergedPages[existingPageIndex] = {
+              ...mergedPages[existingPageIndex],
+              elements: [
+                ...mergedPages[existingPageIndex].elements,
+                ...loadedPage.elements
+              ],
+              canvasSize: loadedPage.canvasSize
+            };
+          } else {
+            // If the current page doesn't exist (which shouldn't happen), add as a new page
+            mergedPages.push({
+              id: currentPageId,
+              elements: loadedPage.elements,
+              canvasSize: loadedPage.canvasSize
+            });
+          }
+        });
+        return mergedPages;
+      });
     } else {
       console.error('Invalid report data structure:', loadedReport);
       // You might want to show an error message to the user here

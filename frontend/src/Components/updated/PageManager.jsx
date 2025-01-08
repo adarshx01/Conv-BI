@@ -26,8 +26,8 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
 
   return (
     <div className="flex flex-col items-center h-44">
-      <div className="flex items-center justify-center mb-2 ">
-        <p className='text-[1rem] mr-8'>Page : </p>
+      <div className="flex items-center justify-center mb-1 ">
+        <p className='text-[1rem] mr-7'>Page : </p>
         <button
           className="px-2 py-1 mr-2 text-gray-600 border border-gray-600 rounded-md hover:bg-gray-200"
           onClick={() => handlePageRemove(currentPageId)}
@@ -35,7 +35,7 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
         >
           <Minus size={16} />
         </button>
-        <div className="px-2 py-1 font-semibold">{currentPageId}</div>
+        <div className="px-2 py-1 font-semibold">{pages.length}</div>
         <button
           className="px-2 py-1  ml-2 text-gray-600 border border-gray-600 rounded-md hover:bg-gray-200"
           onClick={handlePageAdd}
@@ -44,34 +44,39 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
         </button>
       </div>
 
-      <div className="flex items-center justify-center mb-4">
+      <div className="flex items-center justify-center mb-3 mt-1 -space-x-2">
         <div className="flex flex-col mr-4">
-          <label htmlFor="width" className="mb-1 text-gray-600">
-            Width:
-          </label>
-          <input
-            id="width"
-            type="number"
-            className="px-2 py-1 border border-gray-400 rounded-md"
-            value={canvasSize.width}
-            onChange={(e) => handleCanvasResize('width', e.target.value)}
-            min="100"
-            max="3000"
-          />
+          <div className="relative">
+            <input
+              id="width"
+              type="number"
+              className="text-right pl-8 py-1 w-24 border border-gray-400 rounded-md"
+              value={canvasSize.width}
+              onChange={(e) => handleCanvasResize('width', e.target.value)}
+              min="100"
+              max="5000"
+            />
+            <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-600">
+              Width:
+            </span>
+          </div>
         </div>
+
         <div className="flex flex-col">
-          <label htmlFor="height" className="mb-1 text-gray-600">
-            Height:
-          </label>
-          <input
-            id="height"
-            type="number"
-            className="px-2 py-1 border border-gray-400 rounded-md"
-            value={canvasSize.height}
-            onChange={(e) => handleCanvasResize('height', e.target.value)}
-            min="100"
-            max="3000"
-          />
+            <div className="relative">
+              <input
+                id="height"
+                type="number"
+                className="text-right pl-8 w-24 py-1 border border-gray-400 rounded-md"
+                value={canvasSize.height}
+                onChange={(e) => handleCanvasResize('height', e.target.value)}
+                min="100"
+                max="5000"
+              />
+              <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-600">
+                Height:
+              </span>
+            </div>
         </div>
       </div>
 
@@ -79,7 +84,7 @@ function PageManager({ pages, currentPageId, onPageAdd, onPageChange, onPageRemo
         {pages.map((page) => (
           <div
             key={page.id}
-            className={`flex items-center justify-between w-48 px-4 py-2 mb-2 border border-gray-400  cursor-pointer rounded-xl ${
+            className={`flex items-center justify-between w-48 px-4 py-1.5 mb-2 border border-gray-400  cursor-pointer rounded-xl ${
               currentPageId === page.id ? 'bg-gray-200' : 'hover:bg-gray-100'
             }`}
             onClick={() => onPageChange(page.id)}

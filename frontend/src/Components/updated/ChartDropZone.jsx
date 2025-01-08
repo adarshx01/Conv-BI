@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDrop } from 'react-dnd';
-import { ChevronDown, Plus, Minus, Divide, Hash, ArrowDown, ArrowUp, BarChart2 } from 'lucide-react';
+import { ChevronDown, Plus, Minus, Divide, Hash, ArrowDown, ArrowUp, BarChart2, Percent, SortAsc, SortDesc, X } from 'lucide-react';
 
 const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
   const [xAxis, setXAxis] = useState([]);
@@ -10,6 +10,10 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
   const [aggregationColumns, setAggregationColumns] = useState([]);
   const [aggregationType, setAggregationType] = useState('');
   const [countByColumn, setCountByColumn] = useState('');
+  const [selectedAxis, setSelectedAxis] = useState('y'); // Added selectedAxis state
+  //const [percentageBase, setPercentageBase] = useState(''); //Removed
+  const [orderBy, setOrderBy] = useState({ column: '', direction: 'asc' });
+  const [groupByColumns, setGroupByColumns] = useState([]); // Added groupByColumns state
 
   useEffect(() => {
     if (axisInfo) {
@@ -78,8 +82,10 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
     if (!isPieChart && (!xAxis.length || !yAxis.length)) return;
 
     onDataSelect(droppedData, { 
-      xAxis: xAxis.map(x => ({ path: x.path, aggregationFunction: x.aggregationFunction })),
-      yAxis: yAxis.map(y => ({ path: y.path, aggregationFunction: y.aggregationFunction }))
+      xAxis: xAxis.map(x => ({ path: x.path, aggregationFunction: x.aggregationFunction, groupBy: x.groupBy })),
+      yAxis: yAxis.map(y => ({ path: y.path, aggregationFunction: y.aggregationFunction, groupBy: y.groupBy })),
+      orderBy,
+      groupByColumns // Added groupByColumns to the object
     });
   };
 
@@ -92,6 +98,9 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
     setAggregationColumns([]);
     setAggregationType('');
     setCountByColumn('');
+    //setPercentageBase(''); //Removed
+    setOrderBy({ column: '', direction: 'asc' });
+    setGroupByColumns([]); // Clear groupByColumns on modal close
   };
 
   const addColumnToAggregation = (column) => {
@@ -104,6 +113,14 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
     setAggregationColumns(aggregationColumns.filter(c => c !== column));
   };
 
+  const handleGroupByColumnChange = (column) => { // Added handleGroupByColumnChange function
+    if (groupByColumns.includes(column)) {
+      setGroupByColumns(groupByColumns.filter(c => c !== column));
+    } else {
+      setGroupByColumns([...groupByColumns, column]);
+    }
+  };
+
   const applyAggregation = () => {
     if (aggregationColumns.length > 0 && aggregationType) {
       let newColumn;
@@ -112,7 +129,12 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
           path: `COUNT_BY(${aggregationColumns[0].path}, ${countByColumn})`,
           aggregationFunction: 'COUNT_BY'
         };
-      } else if (['ADD', 'SUBTRACT', 'DIVIDE'].includes(aggregationType) && aggregationColumns.length === 2) {
+      } else if (aggregationType === 'PERCENTAGE') {
+        newColumn = {
+          path: `PERCENTAGE(${aggregationColumns[0].path}, ${aggregationColumns[1].path})`,
+          aggregationFunction: 'PERCENTAGE'
+        };
+      } else if (['ADD', 'SUBTRACT', 'MULTIPLY', 'DIVIDE'].includes(aggregationType) && aggregationColumns.length === 2) {
         newColumn = {
           path: `${aggregationType}(${aggregationColumns[0].path}, ${aggregationColumns[1].path})`,
           aggregationFunction: aggregationType
@@ -123,8 +145,25 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
           aggregationFunction: aggregationType
         };
       }
-      setYAxis([...yAxis, newColumn]);
+      
+      if (groupByColumns.length > 0) {
+        newColumn.groupBy = groupByColumns.map(col => col.path).join(',');
+      }
+      
+      if (selectedAxis === 'y') { // Use selectedAxis state
+        setYAxis([...yAxis, newColumn]);
+      } else {
+        setXAxis([...xAxis, newColumn]);
+      }
       closeAggregationModal();
+    }
+  };
+
+  const handleOrderByChange = (column) => {
+    if (orderBy.column === column) {
+      setOrderBy({ column, direction: orderBy.direction === 'asc' ? 'desc' : 'asc' });
+    } else {
+      setOrderBy({ column, direction: 'asc' });
     }
   };
 
@@ -149,7 +188,7 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
                 onClick={() => removeAxis('x', col.path)}
                 className="text-gray-500 hover:text-gray-700"
               >
-                ×
+                <X size={12} />
               </button>
             </div>
           ))}
@@ -180,7 +219,7 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
                 onClick={() => removeAxis('y', col.path)}
                 className="text-gray-500 hover:text-gray-700"
               >
-                ×
+                <X size={12} />
               </button>
             </div>
           ))}
@@ -212,7 +251,7 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
 
       {showAggregationModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg">
+          <div className="bg-white p-6 rounded-lg max-w-lg w-full">
             <h3 className="text-lg font-semibold mb-4">Create Aggregation</h3>
             <div className="mb-4">
               <p className="text-sm font-medium text-gray-700 mb-2">Select Columns (max 2):</p>
@@ -244,6 +283,12 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
                   className={`p-2 rounded ${aggregationType === 'SUBTRACT' ? 'bg-indigo-500 text-white' : 'bg-gray-200'}`}
                 >
                   <Minus size={20} />
+                </button>
+                <button
+                  onClick={() => setAggregationType('MULTIPLY')}
+                  className={`p-2 rounded ${aggregationType === 'MULTIPLY' ? 'bg-indigo-500 text-white' : 'bg-gray-200'}`}
+                >
+                  ×
                 </button>
                 <button
                   onClick={() => setAggregationType('DIVIDE')}
@@ -281,6 +326,12 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
                 >
                   Count By
                 </button>
+                <button
+                  onClick={() => setAggregationType('PERCENTAGE')}
+                  className={`p-2 rounded ${aggregationType === 'PERCENTAGE' ? 'bg-indigo-500 text-white' : 'bg-gray-200'}`}
+                >
+                  <Percent size={20} />
+                </button>
               </div>
             </div>
             {aggregationType === 'COUNT_BY' && (
@@ -300,6 +351,63 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
                 </select>
               </div>
             )}
+            {/*Removed Percentage Base selection*/}
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Select Axis:</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedAxis('x')}
+                  className={`px-2 py-1 rounded ${
+                    selectedAxis === 'x' ? 'bg-indigo-500 text-white' : 'bg-gray-200'
+                  }`}
+                >
+                  X Axis
+                </button>
+                <button
+                  onClick={() => setSelectedAxis('y')}
+                  className={`px-2 py-1 rounded ${
+                    selectedAxis === 'y' ? 'bg-indigo-500 text-white' : 'bg-gray-200'
+                  }`}
+                >
+                  Y Axis
+                </button>
+              </div>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Group By:</p>
+              <div className="flex flex-wrap gap-2">
+                {[...xAxis, ...yAxis].map((col) => (
+                  <button
+                    key={col.path}
+                    onClick={() => handleGroupByColumnChange(col)} // Added handleGroupByColumnChange
+                    className={`px-2 py-1 rounded ${
+                      groupByColumns.includes(col) ? 'bg-indigo-500 text-white' : 'bg-gray-200'
+                    }`}
+                  >
+                    {col.path.split('.')[1]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Order By:</p>
+              <div className="flex flex-wrap gap-2">
+                {[...xAxis, ...yAxis].map((col) => (
+                  <button
+                    key={col.path}
+                    onClick={() => handleOrderByChange(col.path)}
+                    className={`px-2 py-1 rounded flex items-center gap-1 ${
+                      orderBy.column === col.path ? 'bg-indigo-500 text-white' : 'bg-gray-200'
+                    }`}
+                  >
+                    {col.path.split('.')[1]}
+                    {orderBy.column === col.path && (
+                      orderBy.direction === 'asc' ? <SortAsc size={16} /> : <SortDesc size={16} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={closeAggregationModal}
@@ -309,7 +417,7 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
               </button>
               <button
                 onClick={applyAggregation}
-                disabled={aggregationColumns.length === 0 || !aggregationType || (aggregationType === 'COUNT_BY' && !countByColumn)}
+                disabled={aggregationColumns.length === 0 || !aggregationType || (aggregationType === 'COUNT_BY' && !countByColumn) || (aggregationType === 'PERCENTAGE' && aggregationColumns.length !== 2)}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 
                           disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -324,3 +432,4 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
 };
 
 export default ChartDropZone;
+
