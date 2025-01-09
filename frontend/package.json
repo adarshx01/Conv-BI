@@ -7,6 +7,7 @@
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@prisma/client": "^6.0.1",
+    "@radix-ui/react-slot": "^1.1.1",
     "@react-pdf/renderer": "^4.1.5",
     "@shadcn/ui": "^0.0.4",
     "@testing-library/jest-dom": "^5.17.0",
@@ -59,7 +60,7 @@
     "stream-browserify": "^3.0.0",
     "svg-to-pdf": "^1.4.4",
     "svg-to-pdfkit": "^0.1.8",
-    "tailwind-merge": "^2.5.5",
+    "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "util": "^0.12.5",
     "web-vitals": "^2.1.4"

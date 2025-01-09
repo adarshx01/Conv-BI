@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { loadReports, loadReport } from './api';
 import ErrorPopup from './ErrorPopup';
+import { X, Lock, Globe, User } from 'lucide-react';
 
 function LoadReportModal({ onClose, onLoad }) {
   const [savedReports, setSavedReports] = useState([]);
@@ -16,6 +17,7 @@ function LoadReportModal({ onClose, onLoad }) {
     try {
       const reports = await loadReports();
       setSavedReports(reports);
+      console.log('Loaded reports:', reports);
     } catch (err) {
       console.error('Failed to fetch reports:', err);
       setError('Failed to fetch reports. Please try again.');
@@ -45,38 +47,61 @@ function LoadReportModal({ onClose, onLoad }) {
     }
   };
 
+  const getReportColor = (index) => {
+    const colors = ['bg-blue-50', 'bg-green-50', 'bg-yellow-50', 'bg-purple-50', 'bg-pink-50'];
+    return colors[index % colors.length];
+  };
+
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div className="mt-3 text-center h-96 overflow-auto">
+      <div className="relative top-20 mx-auto p-3 border w-full max-w-3xl shadow-lg rounded-md bg-white">
+        <div className="absolute top-2 right-2">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <span className="sr-only">Close</span>
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="mt-2 text-center">
           <h3 className="text-lg leading-6 font-medium text-gray-900">Load Report</h3>
-          <div className="mt-2 px-7 py-3">
+          <div className="mt-2 px-2 py-2">
             {isLoading ? (
               <p>Loading reports...</p>
             ) : savedReports.length > 0 ? (
-              <ul className="space-y-2">
-                {savedReports.map((report) => (
-                  <li key={report.id}>
+              <div className="grid grid-cols-2 gap-2">
+                {savedReports.map((report, index) => (
+                  <div key={report.id} className={`${getReportColor(index)} rounded-lg shadow-sm p-2`}>
                     <button
                       onClick={() => handleLoad(report.id)}
-                      className="w-full text-left px-4 py-2 bg-blue-100 hover:bg-blue-200 rounded"
+                      className="w-full text-left hover:bg-opacity-80 rounded-lg transition duration-150 ease-in-out"
                     >
-                      {report.name}
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-sm truncate">{report.name}</span>
+                        {report.isPrivate ? (
+                          <Lock className="h-3 w-3 text-gray-500" />
+                        ) : (
+                          <Globe className="h-3 w-3 text-gray-500" />
+                        )}
+                      </div>
+                      <div className="mt-1 flex justify-between items-center text-xs text-gray-500">
+                        <span>{new Date(report.created_at).toLocaleDateString()}</span>
+                        <span className="bg-gray-200 px-1 py-0.5 rounded-full text-xxs">
+                          {report.isPrivate ? 'Private' : 'Public'}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center text-xs text-gray-500">
+                        <User className="h-3 w-3 mr-1" />
+                        <span className="truncate">{report.createdBy}</span>
+                      </div>
                     </button>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : (
               <p>No saved reports found.</p>
             )}
-          </div>
-          <div className="items-center px-4 py-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
-            >
-              Close
-            </button>
           </div>
         </div>
       </div>

@@ -1,40 +1,78 @@
-import React, { useState } from "react";
-import { Layout, Input, Button, Card, Avatar, Row, Col } from "antd";
-import { SendOutlined, RobotOutlined, UserOutlined } from "@ant-design/icons";
+import React, { useState, useRef, useEffect } from "react";
+import { Layout, Input, Button, Card, Avatar, Row, Col, Tabs } from "antd";
+import { 
+  SendOutlined, 
+  RobotOutlined, 
+  UserOutlined,
+  AudioOutlined
+} from "@ant-design/icons";
 
 const { Header, Content, Footer } = Layout;
+const { TabPane } = Tabs;
+
+const categories = [
+  {
+    title: "Sales Strategies",
+    description: "Get tailored advice on increasing property visibility and driving sales.",
+  },
+  {
+    title: "Negotiation Tactics",
+    description: "Learn expert negotiation tips to close deals effectively.",
+  },
+  {
+    title: "Marketing Insights",
+    description: "Discover the best marketing strategies to showcase your properties.",
+  },
+  {
+    title: "General Support",
+    description: "Need help with something else? Ask away, and we'll guide you.",
+  },
+];
 
 const ChatbotPage = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleSend = () => {
     if (input.trim() === "") return;
+    
+    // Add user message
     setMessages([...messages, { sender: "user", text: input }]);
     setInput("");
 
-    // Simulate a bot response
+    // Simulate bot response
     setTimeout(() => {
       setMessages((prev) => [
         ...prev,
-        { sender: "bot", text: "How can I assist you today?" },
+        { sender: "bot", text: `Thank you for your message: "${input}". How can I assist you further?` },
       ]);
     }, 1000);
   };
 
   return (
     <Layout style={{ height: "90vh" }}>
-      {/* Header */}
-      <Header style={{ background: "#ffffff", padding: "10px 20px", borderBottom: "1px solid #e0e0e0" }}>
-        <h2 style={{ margin: 0, color: "#555", textAlign: "center" }}>
-          <RobotOutlined style={{ color: "#96cfbc", marginRight: "8px" }} />
-          Chatbot Assistant
-        </h2>
+      <Header style={{ 
+        background: "#ffffff", 
+        padding: "0", 
+        borderBottom: "1px solid #e0e0e0"
+      }}>
+        <Tabs defaultActiveKey="general" className="custom-tabs">
+          <TabPane tab="General" key="general" />
+          <TabPane tab="Sales GPT" key="sales" />
+          <TabPane tab="Project Tracker" key="project" />
+        </Tabs>
       </Header>
 
-      {/* Chat Area */}
       <Content style={{ padding: "20px" }}>
         <div
+          ref={scrollRef}
           style={{
             maxHeight: "65vh",
             overflowY: "auto",
@@ -44,48 +82,61 @@ const ChatbotPage = () => {
             boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
           }}
         >
-          {messages.map((message, index) => (
-            <Row
-              key={index}
-              justify={message.sender === "user" ? "end" : "start"}
-              style={{ marginBottom: "12px" }}
-            >
-              <Col span={16}>
-                <Card
-                  size="small"
-                  style={{
-                    background:
-                      message.sender === "user" ? "#96cfbc" : "#e9d8a6",
-                    borderRadius: "10px",
-                    color: "#555",
-                  }}
-                >
-                  <Row align="middle">
-                    <Avatar
-                      size="small"
-                      icon={
-                        message.sender === "user" ? (
-                          <UserOutlined />
-                        ) : (
-                          <RobotOutlined />
-                        )
-                      }
-                      style={{
-                        background:
-                          message.sender === "user" ? "#78b6a9" : "#c2a06c",
-                        marginRight: "8px",
-                      }}
-                    />
-                    <span>{message.text}</span>
-                  </Row>
-                </Card>
-              </Col>
-            </Row>
-          ))}
+          {messages.length > 0 ? (
+            messages.map((message, index) => (
+              <Row
+                key={index}
+                justify={message.sender === "user" ? "end" : "start"}
+                style={{ marginBottom: "12px" }}
+              >
+                <Col span={16}>
+                  <Card
+                    size="small"
+                    style={{
+                      background: message.sender === "user" ? "#96cfbc" : "#e9d8a6",
+                      borderRadius: "10px",
+                      color: "#555",
+                    }}
+                  >
+                    <Row align="middle">
+                      <Avatar
+                        size="small"
+                        icon={message.sender === "user" ? <UserOutlined /> : <RobotOutlined />}
+                        style={{
+                          background: message.sender === "user" ? "#78b6a9" : "#c2a06c",
+                          marginRight: "8px",
+                        }}
+                      />
+                      <span>{message.text}</span>
+                    </Row>
+                  </Card>
+                </Col>
+              </Row>
+            ))
+          ) : (
+            <div style={{ textAlign: "center", maxWidth: "600px", margin: "0 auto" }}>
+              <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "16px" }}>
+                How can I assist you today?
+              </h1>
+              <p style={{ color: "#666", marginBottom: "32px" }}>
+                Get expert guidance powered by AI agents specializing in Sales, Marketing, and Negotiation.
+                Choose the agent that suits your needs and start your conversation with ease.
+              </p>
+              <Row gutter={[16, 16]}>
+                {categories.map((category) => (
+                  <Col span={12} key={category.title}>
+                    <Card hoverable style={{ cursor: "pointer" }}>
+                      <h3 style={{ fontWeight: "600", marginBottom: "8px" }}>{category.title}</h3>
+                      <p style={{ color: "#666", fontSize: "14px" }}>{category.description}</p>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </div>
+          )}
         </div>
       </Content>
 
-      {/* Input Section */}
       <Footer
         style={{
           background: "#f5f5f5",
@@ -94,7 +145,16 @@ const ChatbotPage = () => {
         }}
       >
         <Row gutter={10}>
-          <Col span={20}>
+          <Col span={2}>
+            <Button
+              icon={<AudioOutlined />}
+              style={{
+                width: "100%",
+                borderRadius: "10px",
+              }}
+            />
+          </Col>
+          <Col span={18}>
             <Input
               placeholder="Type your message..."
               value={input}

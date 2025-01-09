@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Layout, Menu } from "antd";
+import { Layout, Menu, Avatar, Button, Typography } from "antd";
 import { Link } from "react-router-dom";
 import {
   DashboardOutlined,
@@ -8,34 +8,52 @@ import {
   DatabaseOutlined,
   MenuUnfoldOutlined,
   MenuFoldOutlined,
+  MessageOutlined,
+  UserOutlined
 } from "@ant-design/icons";
-import "./style.css"; // Import external CSS file
 
 const { Sider } = Layout;
+const { Text } = Typography;
 
 const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false); // Start with expanded state (collapsed: false)
+  const [collapsed, setCollapsed] = useState(false);
+  const [chats, setChats] = useState([]);
+  const [currentChatId, setCurrentChatId] = useState(null);
 
   const toggleCollapse = () => {
     setCollapsed(!collapsed);
+  };
+
+  const handleNewChat = () => {
+    const newChat = {
+      id: Date.now().toString(),
+      title: `New Chat ${chats.length + 1}`,
+    };
+    setChats([newChat, ...chats]);
+    setCurrentChatId(newChat.id);
   };
 
   return (
     <Sider
       collapsible
       collapsed={collapsed}
-      onCollapse={setCollapsed}  // Correcting collapse behavior
+      onCollapse={setCollapsed}
       className="sidebar-container"
+      width={256}
+      style={{
+        background: "#ffffff",
+        borderRight: "1px solid #e0e0e0"
+      }}
     >
-      {/* Toggle Button */}
-      <div
-        className={`sidebar-toggle ${collapsed ? "" : "sidebar-toggle-expanded"}`}
-        onClick={toggleCollapse}
-      >
-        {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+      <div style={{ padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {!collapsed && <Typography.Title level={4} style={{ margin: 0 }}>Dashboard</Typography.Title>}
+        <Button
+          type="text"
+          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          onClick={toggleCollapse}
+        />
       </div>
 
-      {/* Menu Items */}
       <Menu
         mode="inline"
         theme="dark"
@@ -61,42 +79,6 @@ const Sidebar = () => {
             Chatbot
           </Link>
         </Menu.Item>
-        {/* <Menu.Item
-          key="3"
-          icon={<BarChartOutlined className="sidebar-menu-item-icon" />}
-          className="sidebar-menu-item"
-        >
-          <Link to="/reportbuilder" className="sidebar-menu-item-link">
-          Report Builder
-          </Link>
-        </Menu.Item> */}
-        {/* <Menu.Item
-          key="4"
-          icon={<DatabaseOutlined className="sidebar-menu-item-icon" />}
-          className="sidebar-menu-item"
-        >
-          <Link to="/upload" className="sidebar-menu-item-link">
-            Data Sources
-          </Link>
-        </Menu.Item>
-        <Menu.Item
-          key="4"
-          icon={<DatabaseOutlined className="sidebar-menu-item-icon" />}
-          className="sidebar-menu-item"
-        >
-          <Link to="/chartreport" className="sidebar-menu-item-link">
-            ChartReport
-          </Link>
-        </Menu.Item>
-        <Menu.Item
-          key="4"
-          icon={<DatabaseOutlined className="sidebar-menu-item-icon" />}
-          className="sidebar-menu-item"
-        >
-          <Link to="/reportdesigner" className="sidebar-menu-item-link">
-          RDesigner
-          </Link>
-        </Menu.Item> */}
         <Menu.Item
           key="4"
           icon={<DatabaseOutlined className="sidebar-menu-item-icon" />}
@@ -109,6 +91,63 @@ const Sidebar = () => {
         </Menu.Item>
 
       </Menu>
+
+      {!collapsed && (
+        <>
+          <div style={{ padding: "16px" }}>
+            <Button
+              icon={<MessageOutlined />}
+              onClick={handleNewChat}
+              block
+              style={{ marginBottom: "16px" }}
+            >
+              New Chat
+            </Button>
+            
+            <Text strong style={{ display: "block", marginBottom: "8px" }}>
+              Recent Chats
+            </Text>
+            <Menu mode="inline" theme="light" selectedKeys={[currentChatId]}>
+              {chats.map((chat) => (
+                <Menu.Item
+                  key={chat.id}
+                  onClick={() => setCurrentChatId(chat.id)}
+                >
+                  {chat.title}
+                </Menu.Item>
+              ))}
+            </Menu>
+          </div>
+        </>
+      )}
+
+      <div style={{
+        position: "absolute",
+        bottom: 0,
+        width: "100%",
+        padding: "16px",
+        borderTop: "1px solid #e0e0e0"
+      }}>
+        <Button
+          type="text"
+          block
+          style={{ textAlign: "left" }}
+          icon={
+            <Avatar
+              size="small"
+              icon={<UserOutlined />}
+              style={{ marginRight: "8px" }}
+            />
+          }
+        >
+          {!collapsed && (
+            <div style={{ display: "inline-block" }}>
+              <div style={{ fontWeight: "500" }}>Project Manager</div>
+              <div style={{ fontSize: "12px", color: "#666" }}>View Profile</div>
+            </div>
+          )}
+        </Button>
+      </div>
     </Sider>
   );
 };

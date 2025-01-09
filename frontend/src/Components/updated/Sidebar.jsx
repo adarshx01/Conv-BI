@@ -4,6 +4,7 @@ import { BarChart, LineChart, PieChart, AreaChart, Layers, BarChartHorizontal, P
 import PageManager from './PageManager';
 import axios from 'axios';
 import DraggableColumn from './DraggableColumn';
+import ErrorModal from './ErrorModal';
 
 const DraggableElement = ({ type, icon: Icon, label, onAdd }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
@@ -73,6 +74,8 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
   const [endDate, setEndDate] = useState('');
   const [dataType, setDataType] = useState('Default');
   const [step, setStep] = useState(1);
+  const [isNextDisabled, setIsNextDisabled] = useState(true);
+  const [isErrorModalVisible, setIsErrorModalVisible] = useState(false);
 
   useEffect(() => {
     fetchDatabases();
@@ -164,10 +167,19 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
 
       const response = await axios.post('https://newbi-tsn1.onrender.com/api/query', requestData);  
       if (response.data && Array.isArray(response.data)) {
-        const processedData = processData(response.data);
-        setTableData(processedData);
-        console.log('Table data fetched:', processedData);
-        // onElementAdd({ type: 'table', data: processedData });
+        if(response.data.length>0){
+          const processedData = processData(response.data);
+          setTableData(processedData);
+          setIsNextDisabled(false);
+          console.log('Table data fetched:', processedData);
+          // onElementAdd({ type: 'table', data: processedData });
+        }
+        else{
+          console.log('No data found');
+          setTableData([]);
+          setIsErrorModalVisible(true);
+          setIsNextDisabled(true);
+        }
       } else {
         console.error('Invalid data format received:', response.data);
         setTableData([]);
@@ -178,6 +190,9 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
     }
   };
 
+  const handleCloseErrorModal = () => {
+    setIsErrorModalVisible(false);
+  };
   const processData = (data) => {
     if (dataType === 'Monthly' || dataType === 'Yearly') {
       return data.map(item => {
@@ -355,7 +370,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
               </button>
               <button
                 onClick={() => setStep(3)}
-                disabled={!tableData}
+                disabled={isNextDisabled}
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
@@ -457,6 +472,11 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
         {/* <h3 className="text-lg font-semibold mb-4">Data Source</h3> */}
         {renderStep()}
       </div>
+      <ErrorModal 
+        isVisible={isErrorModalVisible} 
+        onClose={handleCloseErrorModal} 
+        message="No data found. Please try again later."
+      />
       <div className='p-2 border-2 mx-4  rounded-xl mt-4'>
         <p className='font-semibold text-[1rem] text-center'>Page Settings</p>
         <hr className='mb-4'></hr>
