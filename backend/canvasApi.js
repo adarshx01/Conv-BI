@@ -55,7 +55,7 @@ app.post('/api/reports', async (req, res) => {
 
 app.get('/api/reports', async (req, res) => {
   try {
-    const result = await sql`SELECT id, name FROM reports`;
+    const result = await sql`SELECT id, name,created_at FROM reports`;
     res.json(result);
   } catch (err) {
     console.error(err);
