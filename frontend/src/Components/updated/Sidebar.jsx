@@ -473,9 +473,9 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
         {renderStep()}
       </div>
       <ErrorModal 
-        isVisible={isErrorModalVisible} 
+        isVisible={isErrorModalVisible}
         onClose={handleCloseErrorModal} 
-        message="No data found. Please try again later."
+        message="Empty Data returned from the Server. Please try again switching the tables or constraints."
       />
       <div className='p-2 border-2 mx-4  rounded-xl mt-4'>
         <p className='font-semibold text-[1rem] text-center'>Page Settings</p>

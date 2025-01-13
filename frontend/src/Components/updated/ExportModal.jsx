@@ -8,7 +8,6 @@ function ExportModal({ onClose, pages }) {
   const [error, setError] = useState(null);
   const [exportFormat, setExportFormat] = useState('pdf');
   const [progress, setProgress] = useState(0);
-  // const [userName, setUserName] = useState('');
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -18,6 +17,8 @@ function ExportModal({ onClose, pages }) {
     try {
       if (exportFormat === 'pdf') {
         await exportToPDF();
+      } else if (exportFormat === 'csv') {
+        exportToCSV();
       } else {
         await exportToImages();
       }
@@ -30,6 +31,46 @@ function ExportModal({ onClose, pages }) {
     }
   };
 
+  const exportToCSV = () => {
+    // Process each page
+    pages.forEach((page, pageIndex) => {
+      // Process each chart element on the page
+      page.elements.forEach((element, elementIndex) => {
+        if (element.chartData) {
+          // Get axis information
+          const xAxisLabels = element.axisInfo?.xAxis?.map(x => x.path) || [];
+          const yAxisLabels = element.axisInfo?.yAxis?.map(y => y.path) || [];
+          
+          // Create CSV data structure
+          let csvRows = [];
+          
+          // Add header row with column names
+          const headers = ['Date/Label', ...element.chartData.datasets.map(ds => ds.label)];
+          csvRows.push(headers.join(','));
+
+          // Add data rows
+          element.chartData.labels.forEach((label, index) => {
+            const row = [
+              label,
+              ...element.chartData.datasets.map(dataset => dataset.data[index])
+            ];
+            csvRows.push(row.join(','));
+          });
+
+          // Create filename with chart info
+          const chartType = element.type;
+          const fileName = `chart_${pageIndex + 1}_${elementIndex + 1}_${chartType}.csv`;
+
+          // Create and download CSV file
+          const csvContent = csvRows.join('\n');
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          saveAs(blob, fileName);
+        }
+      });
+    });
+  };
+
+  // ... rest of the existing code for PDF and Image export ...
   const preparePageForExport = async (pageId) => {
     const wrapper = document.querySelector(`.canvas-page-${pageId}`).parentElement;
     const canvas = document.querySelector(`.canvas-page-${pageId}`);
@@ -88,10 +129,8 @@ function ExportModal({ onClose, pages }) {
 
         pdf.addImage(imgData, 'JPEG', 0, 0, pages[i].canvasSize.width, pages[i].canvasSize.height, '', 'FAST');
 
-        // Add date, time, and username to bottom-right corner
         const now = new Date();
         const dateTimeString = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
-        // const footerText = `${dateTimeString}, created by ${userName}`;
         const footerText = `${dateTimeString}, created by [UserName]`;
         pdf.setFontSize(10);
         pdf.setTextColor(100);
@@ -126,11 +165,9 @@ function ExportModal({ onClose, pages }) {
           backgroundColor: 'white',
         });
 
-        // Add date, time, and username to bottom-right corner
         const ctx = canvasImage.getContext('2d');
         const now = new Date();
         const dateTimeString = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
-        // const footerText = `${dateTimeString}, created by ${userName}`;
         const footerText = `${dateTimeString}, created by [UserName]`;
         ctx.font = '10px Arial';
         ctx.fillStyle = 'rgba(100, 100, 100, 1)';
@@ -167,21 +204,10 @@ function ExportModal({ onClose, pages }) {
             >
               <option value="pdf">PDF</option>
               <option value="image">Images</option>
+              <option value="csv">CSV</option>
             </select>
           </label>
         </div>
-        {/* <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">
-            Your Name:
-            <input
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              className="mt-1 block w-full p-2 border rounded"
-              placeholder="Enter your name"
-            />
-          </label>
-        </div> */}
 
         {error && <div className="text-red-500 mb-4">{error}</div>}
 
@@ -206,7 +232,6 @@ function ExportModal({ onClose, pages }) {
           </button>
           <button
             onClick={handleExport}
-            // disabled={isExporting || !userName}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           >
             {isExporting ? 'Exporting...' : 'Export'}
@@ -218,4 +243,3 @@ function ExportModal({ onClose, pages }) {
 }
 
 export default ExportModal;
-
