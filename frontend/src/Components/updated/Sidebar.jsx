@@ -323,7 +323,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
                 )}
               </>
             )}
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700">Select Data Type:</label>
               <select
                 value={dataType}
@@ -353,7 +353,7 @@ function Sidebar({ onElementAdd, pages, currentPageId, onPageAdd, onPageChange, 
                   />
                 </div>
               </div>
-            )}
+            )} */}
             <button
               onClick={fetchTableData}
               disabled={joinType && (!joinTable || !joinCondition)}
