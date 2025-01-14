@@ -33,7 +33,7 @@ function App() {
                 ...element,
                 id: Date.now(),
                 position: { x: 0, y: 0 },
-                size: { width: 400, height: 300 },
+                size: { width: 600, height: 500 },
                 axisInfo: { xAxis: [], yAxis: [] } // Initialize with empty arrays
               }
             ]

@@ -168,10 +168,10 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
   };
 
   return (
-    <div className="flex flex-col h-full gap-4 p-4 bg-gray-50 rounded-lg">
+    <div className="flex flex-col h-full gap-4 p-4 bg-white min-w-[24rem] rounded-lg pt-16">
       <div
         ref={dropX}
-        className={`p-4 border-2 border-dashed rounded-lg min-h-[100px] ${
+        className={`p-4 border-2 border-dashed rounded-lg min-h-[9rem] ${
           isOverX ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300'
         }`}
       >
@@ -202,7 +202,7 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
 
       <div
         ref={dropY}
-        className={`p-4 border-2 border-dashed rounded-lg min-h-[100px] ${
+        className={`p-4 border-2 border-dashed rounded-lg min-h-[9rem] ${
           isOverY ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300'
         }`}
       >
@@ -230,29 +230,30 @@ const ChartDropZone = ({ onDataSelect, chartType, axisInfo }) => {
           )}
         </div>
       </div>
+      <div className='flex gap-4 mx-auto'>
+        <button 
+          onClick={openAggregationModal}
+          className="mt-4 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 
+                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+        >
+          Add Aggregation
+        </button>
 
-      <button 
-        onClick={openAggregationModal}
-        className="mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 
-                  focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-      >
-        Add Aggregation
-      </button>
-
-      <button 
-        onClick={handleDisplayGraph}
-        disabled={!droppedData || (xAxis.length === 0 || yAxis.length === 0)}
-        className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 
-                  focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 
-                  disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Display Graph
-      </button>
+        <button 
+          onClick={handleDisplayGraph}
+          disabled={!droppedData || (xAxis.length === 0 || yAxis.length === 0)}
+          className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 
+                    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 
+                    disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Display Graph
+        </button>
+      </div>
 
       {showAggregationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg max-w-lg w-full">
-            <h3 className="text-lg font-semibold mb-4">Create Aggregation</h3>
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex  items-center justify-center">
+          <div className="bg-white p-6 rounded-lg max-w-lg w-full ">
+            {/* <h3 className="text-lg font-semibold mb-4">Create Aggregation</h3> */}
             <div className="mb-4">
               <p className="text-sm font-medium text-gray-700 mb-2">Select Columns (max 2):</p>
               <div className="flex flex-wrap gap-2">

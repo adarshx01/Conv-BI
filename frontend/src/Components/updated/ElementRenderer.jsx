@@ -4,6 +4,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { ChevronDown, ArrowLeft } from 'lucide-react';
 import ChartDropZone from './ChartDropZone';
 import { TableElement } from './TableElement';
+import DateRangeCalendar from './DateRangeCalendar';
 
 ChartJS.register(
   CategoryScale,
@@ -25,9 +26,29 @@ const colorPalette = [
   '#89B9AD', '#C7DCA7', '#FFC436', '#FF8989', '#9DB2BF'
 ];
 
-const ChartControls = ({ onPeriodChange, onGoBack, currentPeriod = 'None' }) => {
+const ChartControls = ({ onPeriodChange, onGoBack, currentPeriod = 'None', onDateRangeChange }) => {
+  const [showCalendar, setShowCalendar] = useState(false);
+
   return (
     <div className="absolute top-2 right-2 flex items-center gap-4 z-10">
+      <div className="relative">
+        <button
+          onClick={() => setShowCalendar(!showCalendar)}
+          className="bg-white border border-gray-200 rounded-md py-1 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Date Range
+        </button>
+        {showCalendar && (
+          <div className="absolute right-0 mt-2">
+            <DateRangeCalendar
+              onDateRangeChange={(range) => {
+                onDateRangeChange(range);
+                setShowCalendar(false);
+              }}
+            />
+          </div>
+        )}
+      </div>
       <div className="relative">
         <select 
           value={currentPeriod}
@@ -188,6 +209,7 @@ function ElementRenderer({ element, onUpdate }) {
   const [axisInfo, setAxisInfo] = useState(element.axisInfo || { xAxis: [], yAxis: [] });
   const [showDropZone, setShowDropZone] = useState(!element.chartData);
   const [currentPeriod, setCurrentPeriod] = useState('None');
+  const [dateRange, setDateRange] = useState({ start: null, end: null });
   const chartRef = useRef(null);
 
   useEffect(() => {
@@ -338,6 +360,36 @@ const transformDataByPeriod = (data, period) => {
     if (chartRef.current) {
       chartRef.current.update();
     }
+  };
+  const handleDateRangeChange = (range) => {
+    setDateRange(range);
+    // Filter your chart data based on the date range here
+    if (chartData) {
+      const filteredData = filterDataByDateRange(chartData, range);
+      setChartData(filteredData);
+    }
+  };
+
+  const filterDataByDateRange = (data, range) => {
+    if (!range.start || !range.end) return data;
+    
+    const startDate = new Date(range.start);
+    const endDate = new Date(range.end);
+    
+    return {
+      ...data,
+      labels: data.labels.filter((label, index) => {
+        const date = new Date(label);
+        return date >= startDate && date <= endDate;
+      }),
+      datasets: data.datasets.map(dataset => ({
+        ...dataset,
+        data: dataset.data.filter((_, index) => {
+          const date = new Date(data.labels[index]);
+          return date >= startDate && date <= endDate;
+        })
+      }))
+    };
   };
 
   const handleGoBack = () => {
@@ -717,11 +769,12 @@ const transformDataByPeriod = (data, period) => {
     };
 
     return (
-      <div id={`chart-${element.id}`} className="relative w-full h-full p-1 rounded-lg shadow-sm">
+      <div id={`chart-${element.id}`} className="relative w-full h-full p-2 pt-8 rounded-lg shadow-sm">
         <ChartControls 
           onPeriodChange={handlePeriodChange}
           onGoBack={handleGoBack}
           currentPeriod={currentPeriod}
+          onDateRangeChange={handleDateRangeChange}
         />
         <ChartComponent
           ref={chartRef}
