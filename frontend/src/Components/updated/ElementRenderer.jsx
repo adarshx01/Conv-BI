@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, forwardRef } from 'react';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { ChevronDown, ArrowLeft } from 'lucide-react';
 import ChartDropZone from './ChartDropZone';
 import { TableElement } from './TableElement';
 
@@ -17,7 +18,6 @@ ChartJS.register(
   Filler
 );
 
-
 const colorPalette = [
   '#CDC1FF', '#FCC737', '#A8CD89', '#9694FF', '#A1EEBD', 
   '#4CC9FE', '#2E236C', '#E68369', '#FF7EE2', '#BBE9FF', 
@@ -25,6 +25,34 @@ const colorPalette = [
   '#89B9AD', '#C7DCA7', '#FFC436', '#FF8989', '#9DB2BF'
 ];
 
+const ChartControls = ({ onPeriodChange, onGoBack, currentPeriod = 'None' }) => {
+  return (
+    <div className="absolute top-2 right-2 flex items-center gap-4 z-10">
+      <div className="relative">
+        <select 
+          value={currentPeriod}
+          onChange={(e) => onPeriodChange(e.target.value)}
+          className="appearance-none bg-white border border-gray-200 rounded-md py-1 pl-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="None">No Period</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Quarterly">Quarterly</option>
+          <option value="Yearly">Yearly</option>
+        </select>
+        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+      </div>
+      <button
+        onClick={onGoBack}
+        className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </button>
+    </div>
+  );
+};
+
+// Existing helper functions remain unchanged
 const getUniqueColors = (count) => {
   const hueStep = 360 / count;
   return Array.from({ length: count }, (_, i) => {
@@ -41,7 +69,8 @@ const getColors = (count) => {
   return colors;
 };
 
-const chartOptions = {
+// Updated chartOptions with period functionality
+const getChartOptions = (period) => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -84,6 +113,18 @@ const chartOptions = {
         }
       },
     },
+    title: {
+      display: period !== 'None',
+      text: `${period} View`,
+      font: {
+        size: 14,
+        weight: 'bold',
+      },
+      padding: {
+        top: 10,
+        bottom: 30
+      }
+    }
   },
   scales: {
     x: {
@@ -120,8 +161,7 @@ const chartOptions = {
     duration: 1000,
     easing: 'easeInOutQuart',
   },
-};
-
+});
 
 const BarLineChart = forwardRef(({ data, options }, ref) => {
   return (
@@ -139,11 +179,15 @@ const BarLineChart = forwardRef(({ data, options }, ref) => {
   );
 });
 
+// Main ElementRenderer component with new period functionality
 function ElementRenderer({ element, onUpdate }) {
   const [data, setData] = useState(element.data || null);
   const [chartData, setChartData] = useState(element.chartData || null);
+  const [originalChartData, setOriginalChartData] = useState(null);
   const [error, setError] = useState(null);
   const [axisInfo, setAxisInfo] = useState(element.axisInfo || { xAxis: [], yAxis: [] });
+  const [showDropZone, setShowDropZone] = useState(!element.chartData);
+  const [currentPeriod, setCurrentPeriod] = useState('None');
   const chartRef = useRef(null);
 
   useEffect(() => {
@@ -154,9 +198,159 @@ function ElementRenderer({ element, onUpdate }) {
     }
   }, [chartData]);
 
+// Previous imports remain unchanged
+const transformDataByPeriod = (data, period) => {
+  if (!data || period === 'None') return data;
+
+  const transformed = {...data};
+  const dateRegex = /^\d{4}-\d{2}(-\d{2})?$/; // Matches YYYY-MM or YYYY-MM-DD
+
+  // Only transform if we have date-like labels
+  if (!transformed.labels.some(label => dateRegex.test(label))) {
+    return data;
+  }
+
+  const groupedData = {};
+  transformed.labels.forEach((label, index) => {
+    let periodKey;
+    const date = new Date(label);
+    
+    switch(period) {
+      case 'Yearly':
+        periodKey = date.getFullYear().toString();
+        break;
+      case 'Quarterly':
+        const quarter = Math.floor(date.getMonth() / 3) + 1;
+        periodKey = `${date.getFullYear()} Q${quarter}`;
+        break;
+      case 'Monthly':
+        periodKey = date.toLocaleString('default', { year: 'numeric', month: 'short' });
+        break;
+      default:
+        periodKey = label;
+    }
+
+    if (!groupedData[periodKey]) {
+      groupedData[periodKey] = {
+        values: transformed.datasets.map(() => []),
+        stats: transformed.datasets.map(() => ({
+          highest: -Infinity,
+          lowest: Infinity,
+          sum: 0,
+          count: 0
+        }))
+      };
+    }
+
+    transformed.datasets.forEach((dataset, datasetIndex) => {
+      const value = dataset.data[index];
+      groupedData[periodKey].values[datasetIndex].push(value);
+      
+      // Update statistics
+      const stats = groupedData[periodKey].stats[datasetIndex];
+      stats.highest = Math.max(stats.highest, value);
+      stats.lowest = Math.min(stats.lowest, value);
+      stats.sum += value;
+      stats.count++;
+    });
+  });
+
+  const newLabels = Object.keys(groupedData);
+  const newDatasets = [];
+
+  transformed.datasets.forEach((dataset, datasetIndex) => {
+    // Create main dataset
+    const mainData = newLabels.map(label => {
+      const stats = groupedData[label].stats[datasetIndex];
+      return stats.sum / stats.count; // Average value
+    });
+
+    // Create highest dataset
+    const highestData = newLabels.map(label => 
+      groupedData[label].stats[datasetIndex].highest
+    );
+
+    // Create lowest dataset
+    const lowestData = newLabels.map(label => 
+      groupedData[label].stats[datasetIndex].lowest
+    );
+
+    const baseColor = colorPalette[datasetIndex % colorPalette.length];
+    const darkenColor = (color, percent) => {
+      const num = parseInt(color.replace("#", ""), 16);
+      const amt = Math.round(2.55 * percent);
+      const R = (num >> 16) + amt;
+      const G = (num >> 8 & 0x00FF) + amt;
+      const B = (num & 0x0000FF) + amt;
+      return "#" + (0x1000000 + 
+        (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 + 
+        (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 + 
+        (B < 255 ? (B < 1 ? 0 : B) : 255)
+      ).toString(16).slice(1);
+    };
+
+    // Add all three datasets
+    newDatasets.push(
+      {
+        ...dataset,
+        label: `${dataset.label} (Avg)`,
+        data: mainData,
+        backgroundColor: `${baseColor}80`,
+        borderColor: baseColor,
+      },
+      {
+        ...dataset,
+        label: `${dataset.label} (High)`,
+        data: highestData,
+        backgroundColor: 'transparent',
+        borderColor: darkenColor(baseColor, -20),
+        borderDash: [5, 5],
+      },
+      {
+        ...dataset,
+        label: `${dataset.label} (Low)`,
+        data: lowestData,
+        backgroundColor: 'transparent',
+        borderColor: darkenColor(baseColor, 20),
+        borderDash: [2, 2],
+      }
+    );
+  });
+
+  return {
+    labels: newLabels,
+    datasets: newDatasets
+  };
+};
+
+  const handlePeriodChange = (period) => {
+    setCurrentPeriod(period);
+    if (!originalChartData) {
+      setOriginalChartData(chartData);
+    }
+    
+    const transformedData = transformDataByPeriod(
+      originalChartData || chartData, 
+      period
+    );
+    
+    setChartData(transformedData);
+    if (chartRef.current) {
+      chartRef.current.update();
+    }
+  };
+
+  const handleGoBack = () => {
+    setShowDropZone(true);
+    setCurrentPeriod('None');
+    if (originalChartData) {
+      setChartData(originalChartData);
+    }
+  };
+
   const handleDataSelect = (selectedData, newAxisInfo) => {
-    console.log("Selected Data:", selectedData); // Log selected data
-    console.log("Axis Info:", newAxisInfo); // Log axis information
+    console.log("Selected Data:", selectedData);
+    console.log("Axis Info:", newAxisInfo);
     setAxisInfo(newAxisInfo);
     setError(null);
     if (selectedData && selectedData.length > 0) {
@@ -170,6 +364,7 @@ function ElementRenderer({ element, onUpdate }) {
       setError("No data returned from the query. Please check your selection and try again.");
     }
   };
+
 
   const processChartData = (selectedData, { xAxis, yAxis, orderBy, groupByColumns }) => {
 
@@ -455,21 +650,23 @@ function ElementRenderer({ element, onUpdate }) {
       barLine: BarLineChart,
     }[element.type] || Bar;
 
-    const chartSpecificOptions = {
-      ...chartOptions,
-      indexAxis: element.type === 'stripedBar' ? 'y' : 'x',
-      scales: {
-        ...chartOptions.scales,
-        x: {
-          ...chartOptions.scales.x,
-          stacked: element.type === 'stackedBar' || element.type === 'stripedBar',
-        },
-        y: {
-          ...chartOptions.scales.y,
-          stacked: element.type === 'stackedBar' || element.type === 'stripedBar',
-        },
-      },
-    };
+    const chartSpecificOptions = getChartOptions(currentPeriod);
+
+    // const chartSpecificOptions = {
+    //   ...chartOptions,
+    //   indexAxis: element.type === 'stripedBar' ? 'y' : 'x',
+    //   scales: {
+    //     ...chartOptions.scales,
+    //     x: {
+    //       ...chartOptions.scales.x,
+    //       stacked: element.type === 'stackedBar' || element.type === 'stripedBar',
+    //     },
+    //     y: {
+    //       ...chartOptions.scales.y,
+    //       stacked: element.type === 'stackedBar' || element.type === 'stripedBar',
+    //     },
+    //   },
+    // };
 
     if (['pie', 'halfPie', 'hollowPie'].includes(element.type)) {
       delete chartSpecificOptions.scales;
@@ -520,7 +717,12 @@ function ElementRenderer({ element, onUpdate }) {
     };
 
     return (
-      <div id={`chart-${element.id}`} className="w-full h-full p-1 rounded-lg shadow-sm">
+      <div id={`chart-${element.id}`} className="relative w-full h-full p-1 rounded-lg shadow-sm">
+        <ChartControls 
+          onPeriodChange={handlePeriodChange}
+          onGoBack={handleGoBack}
+          currentPeriod={currentPeriod}
+        />
         <ChartComponent
           ref={chartRef}
           data={['pie', 'halfPie', 'hollowPie'].includes(element.type) ? pieChartData : chartData}
@@ -531,7 +733,7 @@ function ElementRenderer({ element, onUpdate }) {
   };
 
   const renderChartOrDropZone = () => {
-    if (chartData) {
+    if (!showDropZone && chartData) {
       return renderChart();
     } else if (error) {
       return (
@@ -542,7 +744,10 @@ function ElementRenderer({ element, onUpdate }) {
     } else {
       return (
         <ChartDropZone
-          onDataSelect={handleDataSelect}
+          onDataSelect={(selectedData, newAxisInfo) => {
+            handleDataSelect(selectedData, newAxisInfo);
+            setShowDropZone(false);
+          }}
           chartType={element.type}
           axisInfo={axisInfo}
         />
