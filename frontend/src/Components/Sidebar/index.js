@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Layout, Menu, Avatar, Button, Typography, Modal, Upload, message } from "antd"
+import { Layout, Menu, Avatar, Button, Typography, Modal, Upload, message, Select } from "antd"
 import { Link } from "react-router-dom"
 import {
   DashboardOutlined,
@@ -16,12 +16,14 @@ import {
 
 const { Sider } = Layout
 const { Text } = Typography
+const { Option } = Select
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false)
   const [chats, setChats] = useState([])
   const [currentChatId, setCurrentChatId] = useState(null)
   const [isUploadModalVisible, setIsUploadModalVisible] = useState(false)
+  const [selectedDataSource, setSelectedDataSource] = useState("Zoho Data")
 
   const toggleCollapse = () => {
     setCollapsed(!collapsed)
@@ -66,7 +68,12 @@ const Sidebar = () => {
         <Button type="text" icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={toggleCollapse} />
       </div>
       <Menu mode="inline" theme="dark" defaultSelectedKeys={["1"]} className="sidebar-menu" inlineCollapsed={collapsed}>
-        <Menu.Item key="upload" icon={<UploadOutlined />} onClick={() => setIsUploadModalVisible(true)} style={{ marginLeft: "0.4rem" ,width: "85%"}}>
+        <Menu.Item
+          key="upload"
+          icon={<UploadOutlined />}
+          onClick={() => setIsUploadModalVisible(true)}
+          style={{ marginLeft: "0.4rem", width: "85%" }}
+        >
           Upload
         </Menu.Item>
         <Menu.Item
@@ -144,6 +151,17 @@ const Sidebar = () => {
         onCancel={() => setIsUploadModalVisible(false)}
         footer={null}
       >
+        <div style={{ display: "flex", justifyContent: "left" }}>
+          <span style={{textAlign:"right",marginTop:"0.2rem",marginRight:"0.4rem",fontSize:"1rem"}}>Upload to : </span>
+          <Select
+            style={{ width: "40%", marginBottom: "16px" }}
+            value={selectedDataSource}
+            onChange={(value) => setSelectedDataSource(value)}
+          >
+            <Option value="Zoho Data">Zoho Data</Option>
+            <Option value="Ainsyt Data">Ainsyt Data</Option>
+          </Select>
+        </div>
         <Upload.Dragger
           name="file"
           multiple={true}
