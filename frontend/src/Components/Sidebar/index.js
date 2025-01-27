@@ -82,7 +82,7 @@ const Sidebar = () => {
           className="sidebar-menu-item"
         >
           <Link to="/dashboard" className="sidebar-menu-item-link">
-            Canned Dashboards
+            Dashboards
           </Link>
         </Menu.Item>
         <Menu.Item key="2" icon={<RobotOutlined className="sidebar-menu-item-icon" />} className="sidebar-menu-item">
